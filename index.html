@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lake Powell Water Level Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --water: #0ea5e9;
+    --water-dim: rgba(14,165,233,0.15);
+    --safe: #22c55e;
+    --caution: #eab308;
+    --warning: #f97316;
+    --danger: #ef4444;
+    --critical: #dc2626;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+
+  /* Header */
+  .header { margin-bottom: 1.5rem; }
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  .header .subtitle { color: var(--text-dim); font-size: 0.875rem; margin-top: 0.25rem; }
+
+  /* Hero stats */
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+  }
+  .stat-card .label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+  .stat-card .detail { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem; }
+  .stat-card .value.accent { color: var(--accent); }
+  .stat-card .value.warning { color: var(--warning); }
+  .stat-card .value.danger { color: var(--danger); }
+
+  /* Chart */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .chart-container canvas { width: 100% !important; }
+
+  /* Controls */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 640px) { .controls { grid-template-columns: 1fr; } }
+  .control-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+  }
+  .control-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .control-group .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .control-group input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 6px;
+  }
+  .control-group .slider-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    min-width: 5rem;
+    text-align: right;
+    color: var(--accent);
+  }
+  .control-group .slider-desc {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.375rem;
+  }
+
+  /* Forecast result */
+  .forecast-result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .forecast-result h3 {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+  .forecast-low {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .forecast-date { color: var(--text-dim); font-size: 0.875rem; margin-bottom: 1rem; }
+  .threshold-list { list-style: none; }
+  .threshold-list li {
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .threshold-list .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 0.375rem;
+    flex-shrink: 0;
+  }
+  .threshold-list .dot.safe { background: var(--safe); }
+  .threshold-list .dot.caution { background: var(--caution); }
+  .threshold-list .dot.warning { background: var(--warning); }
+  .threshold-list .dot.danger { background: var(--danger); }
+  .threshold-list .dot.critical { background: var(--critical); }
+  .threshold-list .crossed { color: var(--danger); font-weight: 600; }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* Loading */
+  .loading {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--text-dim);
+  }
+  .loading .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    color: var(--danger);
+    margin-bottom: 1rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Lake Powell Water Level Analyzer</h1>
+    <div class="subtitle">Glen Canyon Dam operating thresholds &amp; snowpack-based forecast</div>
+  </div>
+
+  <div id="app-loading" class="loading">
+    <div class="spinner"></div>
+    <div>Loading live data from USGS &amp; NOAA...</div>
+  </div>
+
+  <div id="app-content" style="display:none;">
+    <!-- Hero Stats -->
+    <div class="hero">
+      <div class="stat-card">
+        <div class="label">Current Level</div>
+        <div class="value accent" id="stat-elevation">—</div>
+        <div class="detail" id="stat-elev-detail"></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Above Min Power Pool</div>
+        <div class="value" id="stat-margin">—</div>
+        <div class="detail">3,490 ft threshold</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Current Snowpack</div>
+        <div class="value" id="stat-swe">—</div>
+        <div class="detail" id="stat-swe-detail"></div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-container">
+      <canvas id="mainChart" height="400"></canvas>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-group">
+        <label>Snowpack Scenario (April 1 SWE)</label>
+        <div class="slider-row">
+          <input type="range" id="sweSlider" min="2000" max="6000" step="50" value="3364">
+          <div class="slider-value" id="sweValue">3364</div>
+        </div>
+        <div class="slider-desc" id="sweDesc">Moderate — projected from current readings</div>
+      </div>
+      <div class="control-group">
+        <label>Release Rate Multiplier</label>
+        <div class="slider-row">
+          <input type="range" id="releaseSlider" min="0.6" max="1.5" step="0.05" value="1.0">
+          <div class="slider-value" id="releaseValue">1.0x</div>
+        </div>
+        <div class="slider-desc" id="releaseDesc">Normal — current Mid-Elevation Tier (7.48 MAF/yr)</div>
+      </div>
+    </div>
+
+    <!-- Forecast Result -->
+    <div class="forecast-result">
+      <h3>Projected Low Point</h3>
+      <div class="forecast-low" id="forecast-elev">—</div>
+      <div class="forecast-date" id="forecast-date"></div>
+      <ul class="threshold-list" id="threshold-list"></ul>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div>
+        Data: <a href="https://waterservices.usgs.gov/" target="_blank">USGS Water Services</a>
+        &middot; <a href="https://www.ncei.noaa.gov/" target="_blank">NOAA NCEI</a>
+        &middot; <a href="https://www.usbr.gov/uc/water/crsp/cs/gcd.html" target="_blank">Bureau of Reclamation</a>
+        &middot; <a href="methodology.html">Methodology</a>
+      </div>
+      <div>Educational tool. Not an official forecast. See <a href="https://www.usbr.gov/lc/region/g4000/24mo.pdf" target="_blank">BOR 24-Month Study</a> for authoritative projections.</div>
+    </div>
+  </div>
+
+  <div id="app-error" style="display:none;"></div>
+</div>
+
+<script type="module">
+import {
+  elevationToStorage,
+  storageToElevation,
+  forecast,
+  findLowPoint,
+  getCrossedThresholds,
+  getNextThresholdBelow,
+  THRESHOLDS,
+} from './forecast.js';
+
+import { loadAllData } from './data.js';
+
+// ============================================================
+// App State
+// ============================================================
+let appData = null;
+let mainChart = null;
+
+// ============================================================
+// Threshold colors & annotations
+// ============================================================
+const THRESHOLD_COLORS = {
+  safe: '#22c55e',
+  caution: '#eab308',
+  warning: '#f97316',
+  danger: '#ef4444',
+  critical: '#dc2626',
+  catastrophic: '#991b1b',
+};
+
+function buildAnnotations() {
+  const annotations = {};
+  const visible = THRESHOLDS.filter(t => t.elevation >= 3370 && t.elevation <= 3600);
+  for (const t of visible) {
+    annotations[`line_${t.elevation}`] = {
+      type: 'line',
+      yMin: t.elevation,
+      yMax: t.elevation,
+      borderColor: THRESHOLD_COLORS[t.severity] || '#64748b',
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      label: {
+        display: true,
+        content: `${t.label} (${t.elevation.toLocaleString()} ft)`,
+        position: 'start',
+        backgroundColor: 'transparent',
+        color: THRESHOLD_COLORS[t.severity] || '#64748b',
+        font: { size: 10, weight: '600' },
+        padding: { left: 4, right: 4, top: 0, bottom: 0 },
+      },
+    };
+  }
+  return annotations;
+}
+
+// ============================================================
+// Chart Setup
+// ============================================================
+function createChart(elevationData) {
+  const ctx = document.getElementById('mainChart').getContext('2d');
+
+  // Historical data
+  const histLabels = elevationData.map(d => d.date);
+  const histValues = elevationData.map(d => d.value);
+
+  mainChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: histLabels,
+      datasets: [
+        {
+          label: 'Historical Elevation',
+          data: histValues,
+          borderColor: '#0ea5e9',
+          backgroundColor: 'rgba(14,165,233,0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          fill: true,
+          tension: 0.1,
+          order: 2,
+        },
+        {
+          label: 'Forecast (dry)',
+          data: [],
+          borderColor: 'rgba(239,68,68,0.5)',
+          backgroundColor: 'rgba(239,68,68,0.05)',
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3,
+          order: 1,
+        },
+        {
+          label: 'Forecast',
+          data: [],
+          borderColor: '#f97316',
+          backgroundColor: 'rgba(249,115,22,0.08)',
+          borderWidth: 2.5,
+          borderDash: [8, 4],
+          pointRadius: 0,
+          fill: '-1',
+          tension: 0.3,
+          order: 0,
+        },
+        {
+          label: 'Forecast (wet)',
+          data: [],
+          borderColor: 'rgba(34,197,94,0.5)',
+          backgroundColor: 'rgba(34,197,94,0.05)',
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 800, easing: 'easeInOutQuart' },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+          grid: { color: 'rgba(51,65,85,0.5)' },
+          ticks: { color: '#94a3b8', maxTicksLimit: 12 },
+        },
+        y: {
+          min: 3370,
+          max: undefined,
+          grid: { color: 'rgba(51,65,85,0.5)' },
+          ticks: {
+            color: '#94a3b8',
+            callback: v => v.toLocaleString() + ' ft',
+          },
+          title: {
+            display: true,
+            text: 'Elevation (ft above NGVD 1929)',
+            color: '#94a3b8',
+            font: { size: 11 },
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'line', padding: 16 },
+        },
+        tooltip: {
+          backgroundColor: '#1e293b',
+          titleColor: '#e2e8f0',
+          bodyColor: '#e2e8f0',
+          borderColor: '#334155',
+          borderWidth: 1,
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y?.toLocaleString()} ft`;
+            },
+          },
+        },
+        annotation: { annotations: buildAnnotations() },
+      },
+    },
+  });
+
+  return mainChart;
+}
+
+// ============================================================
+// Update forecast on chart
+// ============================================================
+function updateForecast(sweApr1, releaseMultiplier) {
+  if (!appData || !mainChart) return;
+
+  const currentElev = appData.currentElev.value;
+  const currentDate = appData.currentElev.date;
+
+  // Run 3 scenarios
+  const scenarios = [
+    { swe: Math.round(sweApr1 * 0.75), idx: 1 }, // dry
+    { swe: sweApr1, idx: 2 },                      // base
+    { swe: Math.round(sweApr1 * 1.25), idx: 3 },  // wet
+  ];
+
+  let baseLow = null;
+
+  for (const s of scenarios) {
+    const results = forecast({
+      currentElevation: currentElev,
+      currentDate: currentDate,
+      sweApr1: s.swe,
+      releaseMultiplier,
+      forecastEndDate: getEndDate(currentDate),
+    });
+
+    // Format as {x, y} for time scale
+    const chartData = [
+      { x: currentDate, y: currentElev },
+      ...results.map(r => ({ x: r.date, y: r.elevation })),
+    ];
+
+    mainChart.data.datasets[s.idx].data = chartData;
+
+    if (s.idx === 2) {
+      baseLow = findLowPoint(results);
+    }
+  }
+
+  mainChart.update('none');
+  updateForecastDisplay(baseLow, currentElev);
+}
+
+function getEndDate(currentDate) {
+  const d = new Date(currentDate);
+  d.setMonth(d.getMonth() + 16);
+  return d.toISOString().slice(0, 10);
+}
+
+// ============================================================
+// Update UI elements
+// ============================================================
+function updateHeroStats() {
+  const elev = appData.currentElev;
+  const elevVal = elev.value;
+  const margin = elevVal - 3490;
+
+  document.getElementById('stat-elevation').textContent = elevVal.toLocaleString() + ' ft';
+  document.getElementById('stat-elev-detail').textContent = `As of ${formatDate(elev.date)}`;
+
+  const marginEl = document.getElementById('stat-margin');
+  marginEl.textContent = margin.toFixed(1) + ' ft';
+  marginEl.className = 'value ' + (margin < 20 ? 'danger' : margin < 50 ? 'warning' : 'accent');
+
+  if (appData.currentSWE) {
+    const sweInches = (appData.currentSWE.avgSWE / 254).toFixed(1);
+    const pctMedian = Math.round((appData.currentSWE.avgSWE / appData.medianApr1SWE) * 100);
+    document.getElementById('stat-swe').textContent = pctMedian + '% of median';
+    document.getElementById('stat-swe').className = 'value ' + (pctMedian < 70 ? 'danger' : pctMedian < 90 ? 'warning' : 'accent');
+    document.getElementById('stat-swe-detail').textContent = `${sweInches} in SWE (${appData.currentSWE.stationCount} stations, ${formatDate(appData.currentSWE.date)})`;
+  } else {
+    document.getElementById('stat-swe').textContent = 'N/A';
+    document.getElementById('stat-swe-detail').textContent = 'Snowpack data unavailable';
+  }
+}
+
+function updateForecastDisplay(low, currentElev) {
+  if (!low) return;
+
+  const el = document.getElementById('forecast-elev');
+  el.textContent = low.elevation.toLocaleString() + ' ft';
+  el.style.color = low.elevation < 3490 ? 'var(--critical)' : low.elevation < 3525 ? 'var(--warning)' : 'var(--accent)';
+
+  document.getElementById('forecast-date').textContent =
+    `Projected ${formatDate(low.date)} — ${(currentElev - low.elevation).toFixed(1)} ft below current level`;
+
+  // Threshold list
+  const list = document.getElementById('threshold-list');
+  list.innerHTML = '';
+  const displayThresholds = THRESHOLDS.filter(t => t.elevation < 3700).sort((a, b) => b.elevation - a.elevation);
+
+  for (const t of displayThresholds) {
+    const crossed = low.elevation < t.elevation;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span class="dot ${t.severity}"></span>
+      <div class="${crossed ? 'crossed' : ''}">
+        <strong>${t.elevation.toLocaleString()} ft — ${t.label}</strong>
+        ${crossed ? ' ✕ CROSSED' : ' ✓ Safe'}
+        ${t.consequence ? `<br><span style="font-size:0.8rem;color:${crossed ? 'var(--danger)' : 'var(--text-dim)'}">${t.consequence}</span>` : ''}
+      </div>
+    `;
+    list.appendChild(li);
+  }
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ============================================================
+// Slider handlers
+// ============================================================
+function setupSliders() {
+  const sweSlider = document.getElementById('sweSlider');
+  const releaseSlider = document.getElementById('releaseSlider');
+
+  // Set initial SWE from current data
+  if (appData.currentSWE) {
+    // Project current SWE to April 1 (assume ~70% of peak reached by mid-March)
+    const projected = Math.round(appData.currentSWE.avgSWE / 0.70);
+    sweSlider.value = Math.min(6000, Math.max(2000, projected));
+  }
+
+  function onSliderChange() {
+    const swe = parseInt(sweSlider.value);
+    const release = parseFloat(releaseSlider.value);
+
+    document.getElementById('sweValue').textContent = swe;
+    document.getElementById('releaseValue').textContent = release.toFixed(2) + 'x';
+
+    // SWE description
+    const pctMedian = Math.round((swe / appData.medianApr1SWE) * 100);
+    let sweDesc = '';
+    if (pctMedian < 70) sweDesc = `Very dry — ${pctMedian}% of April 1 median`;
+    else if (pctMedian < 90) sweDesc = `Below normal — ${pctMedian}% of April 1 median`;
+    else if (pctMedian < 110) sweDesc = `Near normal — ${pctMedian}% of April 1 median`;
+    else if (pctMedian < 130) sweDesc = `Above normal — ${pctMedian}% of April 1 median`;
+    else sweDesc = `Very wet — ${pctMedian}% of April 1 median`;
+    document.getElementById('sweDesc').textContent = sweDesc;
+
+    // Release description
+    const maf = (7.48 * release).toFixed(1);
+    let relDesc = '';
+    if (release < 0.85) relDesc = `Reduced — ~${maf} MAF/yr (drought emergency)`;
+    else if (release <= 1.1) relDesc = `Normal — ~${maf} MAF/yr (Mid-Elevation Tier)`;
+    else relDesc = `Increased — ~${maf} MAF/yr (higher-tier operations)`;
+    document.getElementById('releaseDesc').textContent = relDesc;
+
+    updateForecast(swe, release);
+  }
+
+  sweSlider.addEventListener('input', onSliderChange);
+  releaseSlider.addEventListener('input', onSliderChange);
+
+  // Initial run
+  onSliderChange();
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+async function init() {
+  try {
+    appData = await loadAllData();
+
+    document.getElementById('app-loading').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+
+    updateHeroStats();
+    createChart(appData.elevation);
+    setupSliders();
+  } catch (err) {
+    document.getElementById('app-loading').style.display = 'none';
+    document.getElementById('app-error').style.display = 'block';
+    document.getElementById('app-error').innerHTML =
+      `<div class="error-msg">Failed to load data: ${err.message}. <br>Try refreshing the page.</div>`;
+    console.error(err);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
