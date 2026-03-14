@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lake Powell Water Level Analyzer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💧</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
@@ -162,6 +163,16 @@
   .threshold-list .dot.danger { background: var(--danger); }
   .threshold-list .dot.critical { background: var(--critical); }
   .threshold-list .crossed { color: var(--danger); font-weight: 600; }
+  .dead-pool-notice {
+    background: rgba(220,38,38,0.1);
+    border: 1px solid rgba(220,38,38,0.3);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--critical);
+  }
 
   /* Footer */
   .footer {
@@ -177,6 +188,19 @@
   }
   .footer a { color: var(--accent); text-decoration: none; }
   .footer a:hover { text-decoration: underline; }
+
+  /* Nav */
+  .nav {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.75rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .nav a { color: var(--text-dim); text-decoration: none; }
+  .nav a:hover { color: var(--accent); }
+  .nav a.active { color: var(--accent); font-weight: 600; }
 
   /* Loading */
   .loading {
@@ -206,6 +230,11 @@
 </head>
 <body>
 <div class="container">
+  <nav class="nav">
+    <a href="./" class="active">Home</a>
+    <a href="api.html">API</a>
+    <a href="methodology.html">Methodology</a>
+  </nav>
   <div class="header">
     <h1>Lake Powell Water Level Analyzer</h1>
     <div class="subtitle">Glen Canyon Dam operating thresholds &amp; snowpack-based forecast</div>
@@ -266,6 +295,8 @@
       <h3>Projected Low Point</h3>
       <div class="forecast-low" id="forecast-elev">—</div>
       <div class="forecast-date" id="forecast-date"></div>
+      <div class="dead-pool-notice" id="dead-pool-notice" style="display:none;"></div>
+      <div id="forecast-params" style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.75rem;"></div>
       <ul class="threshold-list" id="threshold-list"></ul>
     </div>
 
@@ -318,22 +349,34 @@ const THRESHOLD_COLORS = {
 function buildAnnotations() {
   const annotations = {};
   const visible = THRESHOLDS.filter(t => t.elevation >= 3370 && t.elevation <= 3600);
+  const keyThresholds = [3490, 3370, 3525]; // min power pool, dead pool, DROA
+  // Explicit positions for key thresholds to avoid overlap
+  const positionMap = { 3525: 'end', 3490: 'start', 3370: 'end' };
+  let posToggle = false;
   for (const t of visible) {
+    const isKey = keyThresholds.includes(t.elevation);
+    let position;
+    if (positionMap[t.elevation] !== undefined) {
+      position = positionMap[t.elevation];
+    } else {
+      position = posToggle ? 'start' : 'end';
+      posToggle = !posToggle;
+    }
     annotations[`line_${t.elevation}`] = {
       type: 'line',
       yMin: t.elevation,
       yMax: t.elevation,
       borderColor: THRESHOLD_COLORS[t.severity] || '#64748b',
-      borderWidth: 1.5,
-      borderDash: [6, 4],
+      borderWidth: isKey ? 2 : 1,
+      borderDash: isKey ? [8, 4] : [4, 6],
       label: {
-        display: true,
+        display: isKey,
         content: `${t.label} (${t.elevation.toLocaleString()} ft)`,
-        position: 'start',
-        backgroundColor: 'transparent',
+        position: position,
+        backgroundColor: 'rgba(15,23,42,0.85)',
         color: THRESHOLD_COLORS[t.severity] || '#64748b',
-        font: { size: 10, weight: '600' },
-        padding: { left: 4, right: 4, top: 0, bottom: 0 },
+        font: { size: isKey ? 12 : 10, weight: isKey ? '700' : '500' },
+        padding: { left: 6, right: 6, top: 2, bottom: 2 },
       },
     };
   }
@@ -543,6 +586,22 @@ function updateForecastDisplay(low, currentElev) {
 
   document.getElementById('forecast-date').textContent =
     `Projected ${formatDate(low.date)} — ${(currentElev - low.elevation).toFixed(1)} ft below current level`;
+
+  // Dead pool clamp notice
+  const notice = document.getElementById('dead-pool-notice');
+  if (low.elevation === 3370) {
+    notice.textContent = '\u26A0 Forecast clamped at dead pool \u2014 actual conditions would be worse.';
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+
+  // Forecast timestamp
+  const sweVal = document.getElementById('sweSlider').value;
+  const relVal = parseFloat(document.getElementById('releaseSlider').value).toFixed(2);
+  const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('forecast-params').textContent =
+    `Forecast with SWE ${sweVal} / Release ${relVal}x \u00B7 Generated ${now}`;
 
   // Threshold list
   const list = document.getElementById('threshold-list');

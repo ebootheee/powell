@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lake Powell Water Level Forecast — Methodology</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💧</text></svg>">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -150,6 +151,11 @@
     footer a { color: #6b7280; }
     footer a:hover { color: #9ca3af; }
 
+    .nav { display: flex; gap: 1.5rem; margin-bottom: 2rem; padding-bottom: 0.75rem; border-bottom: 1px solid #1f2937; font-size: 0.85rem; }
+    .nav a { color: #9ca3af; text-decoration: none; }
+    .nav a:hover { color: #60a5fa; }
+    .nav a.active { color: #60a5fa; font-weight: 600; }
+
     @media (max-width: 600px) {
       .container { padding: 2rem 1rem 3rem; }
       h1 { font-size: 1.6rem; }
@@ -162,11 +168,28 @@
 <body>
   <div class="container">
 
+    <nav class="nav">
+      <a href="./">Home</a>
+      <a href="api.html">API</a>
+      <a href="methodology.html" class="active">Methodology</a>
+    </nav>
+
     <h1>Lake Powell Water Level Forecast</h1>
     <p class="subtitle">A plain-language explanation of the forecasting model, its data sources, and how well it performs.</p>
 
+    <div style="margin-bottom:2rem;">
+      <ul style="list-style:none;padding:0;">
+        <li><a href="#overview">What the Model Does</a></li>
+        <li><a href="#data-sources">Data Sources</a></li>
+        <li><a href="#how-it-works">How the Forecast Works</a></li>
+        <li><a href="#accuracy">How Accurate Is It?</a></li>
+        <li><a href="#outlook">Current 2026 Outlook</a></li>
+        <li><a href="#limitations">Limitations</a></li>
+      </ul>
+    </div>
+
     <!-- ====== Overview ====== -->
-    <h2>What the Model Does</h2>
+    <h2 id="overview">What the Model Does</h2>
     <p>
       The model answers a simple question: <strong>where will the water level be next month?</strong>
     </p>
@@ -185,7 +208,7 @@
     </p>
 
     <!-- ====== Data Sources ====== -->
-    <h2>Data Sources</h2>
+    <h2 id="data-sources">Data Sources</h2>
     <p>All data is pulled from public federal sources. No proprietary data or API keys are required.</p>
     <ul>
       <li>
@@ -209,7 +232,7 @@
     </ul>
 
     <!-- ====== Forecasting Approach ====== -->
-    <h2>How the Forecast Works</h2>
+    <h2 id="how-it-works">How the Forecast Works</h2>
 
     <h3>Step 1: Converting Between Elevation and Storage</h3>
     <p>
@@ -288,7 +311,7 @@
     </p>
 
     <!-- ====== Validation ====== -->
-    <h2>How Accurate Is It?</h2>
+    <h2 id="accuracy">How Accurate Is It?</h2>
     <p>
       The model was validated by hindcasting five known water years (2020&ndash;2024). For each year,
       the model starts from the actual January elevation and April 1 SWE reading, then forecasts forward.
@@ -356,7 +379,7 @@
     </div>
 
     <!-- ====== Current Forecast ====== -->
-    <h2>Current 2026 Outlook</h2>
+    <h2 id="outlook">Current 2026 Outlook</h2>
     <p>
       As of March 2026, Lake Powell sits at <strong>3,529.4 ft</strong> with snowpack running at roughly
       <strong>56% of the April 1 median</strong>. Under moderate assumptions, the model projects a low
@@ -368,7 +391,7 @@
     </p>
 
     <!-- ====== Limitations ====== -->
-    <h2>Limitations</h2>
+    <h2 id="limitations">Limitations</h2>
     <ul>
       <li>
         <strong>Static release rates.</strong> The model uses average monthly decline rates, not dynamic
