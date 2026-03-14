@@ -389,18 +389,16 @@ function buildAnnotations() {
 function createChart(elevationData) {
   const ctx = document.getElementById('mainChart').getContext('2d');
 
-  // Historical data
-  const histLabels = elevationData.map(d => d.date);
-  const histValues = elevationData.map(d => d.value);
+  // Historical data as {x, y} so Chart.js auto-scales across all datasets
+  const histData = elevationData.map(d => ({ x: d.date, y: d.value }));
 
   mainChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: histLabels,
       datasets: [
         {
           label: 'Historical Elevation',
-          data: histValues,
+          data: histData,
           borderColor: '#0ea5e9',
           backgroundColor: 'rgba(14,165,233,0.08)',
           borderWidth: 2,
@@ -459,6 +457,7 @@ function createChart(elevationData) {
           time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
           grid: { color: 'rgba(51,65,85,0.5)' },
           ticks: { color: '#94a3b8', maxTicksLimit: 12 },
+          suggestedMax: getEndDate(elevationData[elevationData.length - 1].date),
         },
         y: {
           min: 3370,
