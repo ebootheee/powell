@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+scripts
+*.test.js
+*.md
+PLAN.md
+ROADMAP.md
+CHANGELOG.md
+README.md
+docker-compose.yml
+.dockerignore
+Dockerfile

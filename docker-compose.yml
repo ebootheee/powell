@@ -1,0 +1,9 @@
+services:
+  powell:
+    build: .
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    volumes:
+      # Mount cache dir so daily-cache job can update without rebuild
+      - ./cache:/usr/share/nginx/html/cache:ro
