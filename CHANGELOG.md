@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-03-19
+
+### Added
+- Daily data caching system (`scripts/cache-data.mjs`) — fetches USGS elevation + NOAA snowpack, runs 5 forecast scenarios, saves snapshots
+- GitHub Actions workflow (`.github/workflows/daily-cache.yml`) — runs daily at 6 AM UTC
+- Forecast snapshot storage (`cache/forecasts/YYYY-MM-DD.json`) — timestamped predictions for backtesting
+- Control dataset (`cache/control.json`) — accumulates actual observations for regression refinement
+- Cache-first data loading in `data.js` — checks `cache/current.json` (36h freshness), falls back to live APIs
+
+### Fixed
+- Chart x-axis now shows full forecast range on initial load (changed `suggestedMax` to `max`)
+
 ## 2026-03-14
 
 ### Added

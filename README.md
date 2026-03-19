@@ -9,7 +9,7 @@ A public web app for analyzing Lake Powell's water level against Glen Canyon Dam
 
 The app fetches live data from USGS and NOAA NCEI, displays 3 years of history on an animated Chart.js chart, and projects the reservoir trajectory forward using a mass-balance model driven by snowpack (SWE) regression. Users adjust SWE scenario and release rate via sliders; the forecast and threshold crossings update in real-time.
 
-All computation runs client-side. No backend, no API keys, no build step.
+All computation runs client-side. No backend, no API keys, no build step. A daily GitHub Actions job caches data and saves forecast snapshots for backtesting.
 
 ## Data Sources
 
@@ -33,6 +33,16 @@ powell/
 ├── api.html                   # Public API — interactive form + docs
 ├── methodology.html           # White paper explaining the model
 ├── forecast.test.js           # 44-test validation suite
+├── scripts/
+│   └── cache-data.mjs         # Daily data fetch + forecast snapshot script
+├── cache/
+│   ├── current.json           # Cached live data (elevation, snowpack)
+│   ├── control.json           # Actual observations for backtesting
+│   └── forecasts/
+│       ├── index.json         # Forecast snapshot index
+│       └── YYYY-MM-DD.json    # Daily forecast snapshots (5 scenarios)
+├── .github/workflows/
+│   └── daily-cache.yml        # Daily cron job (6 AM UTC)
 ├── staticwebapp.config.json   # Azure SWA config (public access)
 ├── PLAN.md                    # Implementation plan
 ├── CHANGELOG.md               # Change log
@@ -45,7 +55,8 @@ powell/
 | File | Purpose |
 |------|---------|
 | `forecast.js` | Core engine: `forecast()`, `elevationToStorage()`, `storageToElevation()`, `predictSpringNetGain()`, `findLowPoint()`, `getCrossedThresholds()` |
-| `data.js` | `loadAllData()` — parallel fetch of elevation, snowpack, historical SWE |
+| `data.js` | `loadAllData()` — cache-first with live API fallback |
+| `scripts/cache-data.mjs` | Daily job: fetches data, runs 5 scenarios, saves snapshots |
 | `index.html` | Chart.js visualization, sliders, threshold display, hero stats |
 | `api.html` | Public API: URL hash params, JS module import, Claude/LLM integration |
 
