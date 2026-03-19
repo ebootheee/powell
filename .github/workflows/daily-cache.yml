@@ -1,0 +1,44 @@
+name: Daily Data Cache & Forecast
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC (11 PM MT, after USGS/NCEI daily data publishes)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch data and run forecasts
+        run: node scripts/cache-data.mjs
+
+      - name: Commit cache updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cache/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Daily cache update $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Deploy to Azure SWA
+        if: env.GPP_DEV_TOKEN != ''
+        env:
+          GPP_DEV_TOKEN: ${{ secrets.GPP_DEV_TOKEN }}
+        run: |
+          # Only deploy if we have the token configured
+          echo "Deploy would run here — configure GPP_DEV_TOKEN secret to enable"
+          # Future: npm install && node ../scripts/deploy-local.mjs powell . "Daily cache update"

@@ -457,7 +457,7 @@ function createChart(elevationData) {
           time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
           grid: { color: 'rgba(51,65,85,0.5)' },
           ticks: { color: '#94a3b8', maxTicksLimit: 12 },
-          suggestedMax: getEndDate(elevationData[elevationData.length - 1].date),
+          max: getEndDate(elevationData[elevationData.length - 1].date),
         },
         y: {
           min: 3370,
@@ -689,6 +689,11 @@ async function init() {
     updateHeroStats();
     createChart(appData.elevation);
     setupSliders();
+
+    // Show data source indicator
+    if (appData.fromCache) {
+      document.getElementById('stat-elev-detail').textContent += ' (cached)';
+    }
   } catch (err) {
     document.getElementById('app-loading').style.display = 'none';
     document.getElementById('app-error').style.display = 'block';

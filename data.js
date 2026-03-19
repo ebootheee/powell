@@ -122,10 +122,53 @@ async function fetchHistoricalApr1SWE(years) {
 }
 
 /**
- * Load all data needed for the app
+ * Try to load cached data (from daily GitHub Actions job).
+ * Returns null if cache is missing or stale (>36 hours old).
+ */
+async function tryLoadCache() {
+  try {
+    const resp = await fetch('./cache/current.json');
+    if (!resp.ok) return null;
+    const cache = await resp.json();
+
+    // Check freshness — cache is stale after 36 hours
+    const age = Date.now() - new Date(cache.generatedAt).getTime();
+    const MAX_AGE_MS = 36 * 60 * 60 * 1000;
+    if (age > MAX_AGE_MS) {
+      console.log(`Cache is ${(age / 3600000).toFixed(1)}h old — falling back to live APIs`);
+      return null;
+    }
+
+    console.log(`Using cached data from ${cache.generatedAt}`);
+    return cache;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Load all data needed for the app.
+ * Tries cache first, falls back to live APIs.
  * @returns {Promise<Object>}
  */
 async function loadAllData() {
+  // Try cache first
+  const cache = await tryLoadCache();
+  if (cache) {
+    return {
+      elevation: cache.elevationFull || cache.elevation,
+      snowpack: [],
+      historicalSWE: cache.historicalSWE,
+      currentElev: cache.currentElev,
+      currentSWE: cache.currentSWE,
+      medianApr1SWE: cache.medianApr1SWE,
+      fromCache: true,
+      cacheDate: cache.date,
+    };
+  }
+
+  // Fall back to live APIs
+  console.log('No fresh cache — fetching live data from USGS & NOAA...');
   const today = new Date().toISOString().slice(0, 10);
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
@@ -160,6 +203,7 @@ async function loadAllData() {
     currentElev,
     currentSWE,
     medianApr1SWE,
+    fromCache: false,
   };
 }
 
@@ -168,6 +212,7 @@ export {
   fetchReleases,
   fetchSnowpack,
   fetchHistoricalApr1SWE,
+  tryLoadCache,
   loadAllData,
   SNOTEL_STATIONS,
 };
