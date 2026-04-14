@@ -1,0 +1,11 @@
+/*.html
+  Cache-Control: public, max-age=300
+
+/*.js
+  Cache-Control: public, max-age=3600
+
+/cache/*
+  Cache-Control: public, max-age=1800
+
+/cache/current.json
+  Cache-Control: public, max-age=300

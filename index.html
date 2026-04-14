@@ -349,9 +349,9 @@ const THRESHOLD_COLORS = {
 function buildAnnotations() {
   const annotations = {};
   const visible = THRESHOLDS.filter(t => t.elevation >= 3370 && t.elevation <= 3600);
-  const keyThresholds = [3490, 3370, 3525]; // min power pool, dead pool, DROA
+  const keyThresholds = [3490, 3370, 3525, 3575, 3500, 3470]; // min power pool, dead pool, DROA, tier boundary, emergency, penstock
   // Explicit positions for key thresholds to avoid overlap
-  const positionMap = { 3525: 'end', 3490: 'start', 3370: 'end' };
+  const positionMap = { 3575: 'start', 3525: 'end', 3500: 'start', 3490: 'end', 3470: 'start', 3370: 'end' };
   let posToggle = false;
   for (const t of visible) {
     const isKey = keyThresholds.includes(t.elevation);
