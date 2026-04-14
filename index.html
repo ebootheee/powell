@@ -8,6 +8,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
   :root {
     --bg: #0f172a;
@@ -267,18 +269,22 @@
 
     <!-- Chart -->
     <div class="chart-container">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:0.5rem;">
+        <button id="resetZoom" style="font-size:0.75rem;padding:0.25rem 0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:0.375rem;color:var(--text-dim);cursor:pointer;">Reset zoom</button>
+      </div>
       <canvas id="mainChart" height="400"></canvas>
     </div>
 
     <!-- Controls -->
     <div class="controls">
       <div class="control-group">
-        <label>Snowpack Scenario (April 1 SWE)</label>
+        <label id="sweLabel">Snowpack Scenario (April 1 SWE)</label>
         <div class="slider-row">
           <input type="range" id="sweSlider" min="2000" max="6000" step="50" value="3364">
           <div class="slider-value" id="sweValue">3364</div>
         </div>
         <div class="slider-desc" id="sweDesc">Moderate — projected from current readings</div>
+        <div class="slider-desc" id="sweLastYear" style="margin-top:0.25rem;opacity:0.7;"></div>
       </div>
       <div class="control-group">
         <label>Release Rate Multiplier</label>
@@ -457,7 +463,8 @@ function createChart(elevationData) {
           time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
           grid: { color: 'rgba(51,65,85,0.5)' },
           ticks: { color: '#94a3b8', maxTicksLimit: 12 },
-          max: getEndDate(elevationData[elevationData.length - 1].date),
+          min: '2025-07-01',
+          max: '2027-07-01',
         },
         y: {
           min: 3370,
@@ -492,6 +499,23 @@ function createChart(elevationData) {
           },
         },
         annotation: { annotations: buildAnnotations() },
+        zoom: {
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x',
+          },
+          pan: {
+            enabled: true,
+            mode: 'x',
+          },
+          limits: {
+            x: {
+              min: 'original',
+              max: 'original',
+            },
+          },
+        },
       },
     },
   });
@@ -634,6 +658,23 @@ function setupSliders() {
   const sweSlider = document.getElementById('sweSlider');
   const releaseSlider = document.getElementById('releaseSlider');
 
+  // Compute next April 1 year dynamically
+  const now = new Date();
+  const apr1ThisYear = new Date(now.getFullYear(), 3, 1);
+  const nextApr1Year = now >= apr1ThisYear ? now.getFullYear() + 1 : now.getFullYear();
+  const lastApr1Year = nextApr1Year - 1;
+
+  document.getElementById('sweLabel').textContent = `Snowpack Scenario (April 1, ${nextApr1Year} SWE)`;
+
+  // Show prior year's actual April 1 SWE for context
+  const lastYearData = appData.historicalSWE?.find(h => h.year === lastApr1Year);
+  if (lastYearData) {
+    const pct = Math.round((lastYearData.avgSWE / appData.medianApr1SWE) * 100);
+    const desc = pct < 50 ? 'Critically dry' : pct < 70 ? 'Very dry' : pct < 90 ? 'Below normal' : pct < 110 ? 'Near normal' : 'Above normal';
+    document.getElementById('sweLastYear').textContent =
+      `Apr 1, ${lastApr1Year} actual: ${lastYearData.avgSWE.toLocaleString()} (${pct}% of median) — ${desc}`;
+  }
+
   // Set initial SWE from current data
   if (appData.currentSWE) {
     // Project current SWE to April 1 (assume ~70% of peak reached by mid-March)
@@ -689,6 +730,10 @@ async function init() {
     updateHeroStats();
     createChart(appData.elevation);
     setupSliders();
+
+    document.getElementById('resetZoom').addEventListener('click', () => {
+      mainChart.zoomScale('x', { min: '2025-07-01', max: '2027-07-01' }, 'none');
+    });
 
     // Show data source indicator
     if (appData.fromCache) {
