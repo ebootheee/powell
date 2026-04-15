@@ -74,8 +74,9 @@
     padding: 1rem;
     margin-bottom: 1.5rem;
     position: relative;
+    height: 480px;
   }
-  .chart-container canvas { width: 100% !important; }
+  .chart-container canvas { width: 100% !important; height: 100% !important; }
 
   /* Controls */
   .controls {
@@ -732,7 +733,7 @@ async function init() {
     setupSliders();
 
     document.getElementById('resetZoom').addEventListener('click', () => {
-      mainChart.zoomScale('x', { min: '2025-07-01', max: '2027-07-01' }, 'none');
+      mainChart.resetZoom();
     });
 
     // Show data source indicator
