@@ -85,7 +85,12 @@
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
-  @media (max-width: 640px) { .controls { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) {
+    .controls { grid-template-columns: 1fr; }
+    .container { padding: 1rem; }
+    .chart-container { height: 340px; padding: 0.5rem; }
+    .header h1 { font-size: 1.25rem; }
+  }
   .control-group {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -353,37 +358,49 @@ const THRESHOLD_COLORS = {
   catastrophic: '#991b1b',
 };
 
+const SHORT_LABELS = {
+  3575: 'Tier Boundary', 3525: 'DROA', 3500: 'Emergency',
+  3490: 'Min Power', 3470: 'Penstock', 3370: 'Dead Pool',
+};
+
+function isCompact() { return window.innerWidth < 640; }
+
 function buildAnnotations() {
+  const compact = isCompact();
   const annotations = {};
   const visible = THRESHOLDS.filter(t => t.elevation >= 3370 && t.elevation <= 3600);
-  const keyThresholds = [3490, 3370, 3525, 3575, 3500, 3470]; // min power pool, dead pool, DROA, tier boundary, emergency, penstock
-  // Explicit positions for key thresholds to avoid overlap
+
+  // Mobile: only label the 3 most critical thresholds
+  const labeledThresholds = compact
+    ? [3490, 3370, 3525]
+    : [3490, 3370, 3525, 3575, 3500, 3470];
+
   const positionMap = { 3575: 'start', 3525: 'end', 3500: 'start', 3490: 'end', 3470: 'start', 3370: 'end' };
-  let posToggle = false;
+
   for (const t of visible) {
-    const isKey = keyThresholds.includes(t.elevation);
-    let position;
-    if (positionMap[t.elevation] !== undefined) {
-      position = positionMap[t.elevation];
-    } else {
-      position = posToggle ? 'start' : 'end';
-      posToggle = !posToggle;
-    }
+    const isLabeled = labeledThresholds.includes(t.elevation);
+    const position = positionMap[t.elevation] || 'end';
+    const label = compact
+      ? `${SHORT_LABELS[t.elevation] || t.label} (${t.elevation.toLocaleString()}')`
+      : `${t.label} (${t.elevation.toLocaleString()} ft)`;
+
     annotations[`line_${t.elevation}`] = {
       type: 'line',
       yMin: t.elevation,
       yMax: t.elevation,
       borderColor: THRESHOLD_COLORS[t.severity] || '#64748b',
-      borderWidth: isKey ? 2 : 1,
-      borderDash: isKey ? [8, 4] : [4, 6],
+      borderWidth: isLabeled ? 2 : 1.5,
+      borderDash: isLabeled ? [8, 4] : [4, 6],
       label: {
-        display: isKey,
-        content: `${t.label} (${t.elevation.toLocaleString()} ft)`,
+        display: isLabeled,
+        content: label,
         position: position,
-        backgroundColor: 'rgba(15,23,42,0.85)',
+        backgroundColor: 'rgba(15,23,42,0.9)',
         color: THRESHOLD_COLORS[t.severity] || '#64748b',
-        font: { size: isKey ? 12 : 10, weight: isKey ? '700' : '500' },
-        padding: { left: 6, right: 6, top: 2, bottom: 2 },
+        font: { size: compact ? 9 : (isLabeled ? 12 : 10), weight: isLabeled ? '700' : '500' },
+        padding: compact
+          ? { left: 3, right: 3, top: 1, bottom: 1 }
+          : { left: 6, right: 6, top: 2, bottom: 2 },
       },
     };
   }
@@ -395,8 +412,8 @@ function buildAnnotations() {
 // ============================================================
 function createChart(elevationData) {
   const ctx = document.getElementById('mainChart').getContext('2d');
+  const compact = isCompact();
 
-  // Historical data as {x, y} so Chart.js auto-scales across all datasets
   const histData = elevationData.map(d => ({ x: d.date, y: d.value }));
 
   mainChart = new Chart(ctx, {
@@ -404,7 +421,7 @@ function createChart(elevationData) {
     data: {
       datasets: [
         {
-          label: 'Historical Elevation',
+          label: 'Historical',
           data: histData,
           borderColor: '#0ea5e9',
           backgroundColor: 'rgba(14,165,233,0.08)',
@@ -457,13 +474,18 @@ function createChart(elevationData) {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 800, easing: 'easeInOutQuart' },
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
       scales: {
         x: {
           type: 'time',
-          time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+          time: { unit: 'month', displayFormats: { month: compact ? "MMM ''yy" : 'MMM yyyy' } },
           grid: { color: 'rgba(51,65,85,0.5)' },
-          ticks: { color: '#94a3b8', maxTicksLimit: 12 },
+          ticks: {
+            color: '#94a3b8',
+            maxTicksLimit: compact ? 6 : 12,
+            maxRotation: compact ? 45 : 0,
+            font: { size: compact ? 10 : 12 },
+          },
           min: '2025-07-01',
           max: '2027-07-01',
         },
@@ -473,10 +495,12 @@ function createChart(elevationData) {
           grid: { color: 'rgba(51,65,85,0.5)' },
           ticks: {
             color: '#94a3b8',
-            callback: v => v.toLocaleString() + ' ft',
+            callback: v => v.toLocaleString() + "'",
+            font: { size: compact ? 10 : 12 },
+            maxTicksLimit: compact ? 6 : 8,
           },
           title: {
-            display: true,
+            display: !compact,
             text: 'Elevation (ft above NGVD 1929)',
             color: '#94a3b8',
             font: { size: 11 },
@@ -485,7 +509,15 @@ function createChart(elevationData) {
       },
       plugins: {
         legend: {
-          labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'line', padding: 16 },
+          position: compact ? 'bottom' : 'top',
+          labels: {
+            color: '#94a3b8',
+            usePointStyle: true,
+            pointStyle: 'line',
+            padding: compact ? 8 : 16,
+            font: { size: compact ? 10 : 12 },
+            boxWidth: compact ? 20 : 40,
+          },
         },
         tooltip: {
           backgroundColor: '#1e293b',
@@ -511,15 +543,33 @@ function createChart(elevationData) {
             mode: 'x',
           },
           limits: {
-            x: {
-              min: 'original',
-              max: 'original',
-            },
+            x: { min: 'original', max: 'original' },
           },
         },
       },
     },
   });
+
+  // Rebuild annotations on resize to adapt mobile ↔ desktop
+  let resizeTimer;
+  const resizeHandler = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (!mainChart) return;
+      const c = isCompact();
+      mainChart.options.plugins.annotation.annotations = buildAnnotations();
+      mainChart.options.scales.x.time.displayFormats.month = c ? "MMM ''yy" : 'MMM yyyy';
+      mainChart.options.scales.x.ticks.maxTicksLimit = c ? 6 : 12;
+      mainChart.options.scales.x.ticks.font.size = c ? 10 : 12;
+      mainChart.options.scales.y.ticks.font.size = c ? 10 : 12;
+      mainChart.options.scales.y.title.display = !c;
+      mainChart.options.plugins.legend.position = c ? 'bottom' : 'top';
+      mainChart.options.plugins.legend.labels.font.size = c ? 10 : 12;
+      mainChart.options.plugins.legend.labels.padding = c ? 8 : 16;
+      mainChart.update('none');
+    }, 300);
+  };
+  window.addEventListener('resize', resizeHandler);
 
   return mainChart;
 }
