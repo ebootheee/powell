@@ -71,10 +71,10 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 0.75rem;
-    padding: 1rem;
+    padding: 1rem 1rem 1.25rem;
     margin-bottom: 1.5rem;
     position: relative;
-    height: 480px;
+    height: 540px;
   }
   .chart-container canvas { width: 100% !important; height: 100% !important; }
 
@@ -148,7 +148,7 @@
   @media (max-width: 640px) {
     .controls { grid-template-columns: 1fr; }
     .container { padding: 1rem; }
-    .chart-container { height: 340px; padding: 0.5rem; }
+    .chart-container { height: 380px; padding: 0.5rem 0.5rem 0.75rem; }
     .header h1 { font-size: 1.25rem; }
     .policy-toggle button { padding: 0.35rem 0.6rem; font-size: 0.75rem; }
   }
@@ -468,9 +468,13 @@ function buildAnnotations() {
   // Mobile: only label the 3 most critical thresholds
   const labeledThresholds = compact
     ? [3490, 3370, 3525]
-    : [3490, 3370, 3525, 3575, 3500, 3470];
+    : [3575, 3525, 3500, 3490, 3470, 3370];
 
-  const positionMap = { 3575: 'start', 3525: 'end', 3500: 'start', 3490: 'end', 3470: 'start', 3370: 'end' };
+  // Stagger labels horizontally across the visible chart so they don't
+  // pile up at the left/right edges. Percentages = position along the line.
+  const positionMap = compact
+    ? { 3575: '8%', 3525: '50%', 3500: '8%', 3490: '92%', 3470: '50%', 3370: '92%' }
+    : { 3575: '8%', 3525: '28%', 3500: '48%', 3490: '68%', 3470: '85%', 3370: '95%' };
 
   for (const t of visible) {
     const isLabeled = labeledThresholds.includes(t.elevation);
@@ -492,10 +496,11 @@ function buildAnnotations() {
         position: position,
         backgroundColor: 'rgba(15,23,42,0.9)',
         color: THRESHOLD_COLORS[t.severity] || '#64748b',
-        font: { size: compact ? 9 : (isLabeled ? 12 : 10), weight: isLabeled ? '700' : '500' },
+        font: { size: compact ? 9 : (isLabeled ? 11 : 10), weight: isLabeled ? '700' : '500' },
         padding: compact
           ? { left: 3, right: 3, top: 1, bottom: 1 }
-          : { left: 6, right: 6, top: 2, bottom: 2 },
+          : { left: 5, right: 5, top: 2, bottom: 2 },
+        yAdjust: -10,  // Lift labels slightly above the line so they don't sit on it
       },
     };
   }
@@ -510,6 +515,17 @@ function createChart(elevationData) {
   const compact = isCompact();
 
   const histData = elevationData.map(d => ({ x: d.date, y: d.value }));
+
+  // Default x-axis window: start 3 months before current observation
+  // (rounded to start of month) and extend through forecast horizon.
+  // For April 2026 conditions this lands at Jan 1, 2026 → ~Sep 2027,
+  // matching the requested default view.
+  const lastObs = elevationData.length
+    ? new Date(elevationData[elevationData.length - 1].date)
+    : new Date();
+  const xMin = new Date(lastObs.getFullYear(), lastObs.getMonth() - 3, 1);
+  const xMax = new Date(lastObs.getFullYear(), lastObs.getMonth() + 17, 1);
+  const fmtDate = d => d.toISOString().slice(0, 10);
 
   mainChart = new Chart(ctx, {
     type: 'line',
@@ -582,6 +598,7 @@ function createChart(elevationData) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { top: 4, right: 12, bottom: 8, left: 4 } },
       animation: { duration: 800, easing: 'easeInOutQuart' },
       interaction: { mode: 'nearest', intersect: false, axis: 'x' },
       scales: {
@@ -595,8 +612,8 @@ function createChart(elevationData) {
             maxRotation: compact ? 45 : 0,
             font: { size: compact ? 10 : 12 },
           },
-          min: '2025-07-01',
-          max: '2027-07-01',
+          min: fmtDate(xMin),
+          max: fmtDate(xMax),
         },
         y: {
           min: 3370,
@@ -868,13 +885,26 @@ function setupSliders() {
     else sweDesc = `Very wet — ${pctMedian}% of April 1 median`;
     document.getElementById('sweDesc').textContent = sweDesc;
 
-    // Release description
-    const maf = (7.48 * release).toFixed(1);
-    let relDesc = '';
-    if (release < 0.85) relDesc = `Reduced — ~${maf} MAF/yr (drought emergency)`;
-    else if (release <= 1.1) relDesc = `Normal — ~${maf} MAF/yr (Mid-Elevation Tier)`;
-    else relDesc = `Increased — ~${maf} MAF/yr (higher-tier operations)`;
-    document.getElementById('releaseDesc').textContent = relDesc;
+    // Release description — shows policy-aware behavior
+    const releaseGroup = releaseSlider.closest('.control-group');
+    if (currentPolicy === 'static') {
+      const maf = (7.48 * release).toFixed(1);
+      let relDesc = '';
+      if (release < 0.85) relDesc = `Reduced — ~${maf} MAF/yr (drought emergency)`;
+      else if (release <= 1.1) relDesc = `Normal — ~${maf} MAF/yr (Mid-Elevation Tier)`;
+      else relDesc = `Increased — ~${maf} MAF/yr (higher-tier operations)`;
+      document.getElementById('releaseDesc').textContent = relDesc;
+      releaseSlider.disabled = false;
+      releaseGroup.style.opacity = '1';
+    } else {
+      // Dynamic / Emergency: slider is overridden by tier logic
+      releaseSlider.disabled = true;
+      releaseGroup.style.opacity = '0.55';
+      document.getElementById('releaseDesc').textContent =
+        currentPolicy === 'emergency'
+          ? 'Auto-tier + 1 MAF DROA augmentation — slider overridden by Emergency policy'
+          : 'Auto-tier per BOR 2024 SEIS ROD — slider overridden by Auto-tier policy';
+    }
 
     updateForecast(swe, release);
   }

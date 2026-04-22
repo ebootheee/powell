@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-22
+
+### Changed
+- Default chart x-axis range now auto-computed from current observation: starts 3 months before (Jan 2026 for current conditions) and extends 17 months ahead. Previously hardcoded to Jul 2025 → Jul 2027, which left a stale historical tail on the left
+- Threshold annotation labels staggered horizontally across the chart (8% → 28% → 48% → 68% → 85% → 95% positions) instead of all stacking at the start/end edges. Eliminates the label pileups that obscured the chart
+- Chart container height bumped (480px → 540px desktop, 340px → 380px mobile) and chart layout padding added so x-axis date labels render fully without clipping
+- Release Rate Multiplier slider is now disabled and visually grayed out when Auto-tier or Emergency policies are active, since those policies override the slider value with BOR's tier structure. Description text updated to explain the override
+
 ## 2026-04-21
 
 ### Added
