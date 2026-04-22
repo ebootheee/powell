@@ -13,9 +13,13 @@ import {
   findLowPoint,
   getCrossedThresholds,
   getNextThresholdBelow,
+  releaseMultiplierForElevation,
   SWE_REGRESSION,
   SWE_INFLOW_PAIRS,
   THRESHOLDS,
+  NET_GAIN_FLOOR_MAF,
+  NET_GAIN_CEILING_MAF,
+  BOR_APR2026_MOST_PROBABLE,
 } from './forecast.js';
 
 let passed = 0;
@@ -289,6 +293,135 @@ for (const scenario of scenarios) {
     console.log(`    ⚠ CRITICAL: ${criticalCrossings.map(t => t.consequence).join('; ')}`);
   }
 }
+
+// ============================================================
+console.log('\n=== SWE Regression Physical Bounds ===');
+// ============================================================
+
+// At very low SWE (far below calibration range), the regression extrapolates
+// to wildly negative values. The floor should prevent this.
+const extrapLow = SWE_REGRESSION.slope * 1000 + SWE_REGRESSION.intercept;
+const clampedLow = predictSpringNetGain(1000);
+assert(extrapLow < NET_GAIN_FLOOR_MAF,
+  `Raw regression at SWE=1000 extrapolates below floor (${extrapLow.toFixed(2)} < ${NET_GAIN_FLOOR_MAF})`);
+assert(clampedLow === NET_GAIN_FLOOR_MAF,
+  `Clamped prediction at SWE=1000 equals floor: ${clampedLow.toFixed(2)} === ${NET_GAIN_FLOOR_MAF}`);
+
+// At very high SWE, ceiling should kick in (if raw > ceiling)
+const clampedHigh = predictSpringNetGain(10000);
+assert(clampedHigh <= NET_GAIN_CEILING_MAF,
+  `Clamped prediction at SWE=10000 respects ceiling: ${clampedHigh.toFixed(2)} <= ${NET_GAIN_CEILING_MAF}`);
+
+// Within calibration range, no clamping should occur
+const midRange = predictSpringNetGain(4500);
+const rawMid = SWE_REGRESSION.slope * 4500 + SWE_REGRESSION.intercept;
+assertClose(midRange, rawMid, 0.001,
+  `Within calibration range (SWE=4500), prediction matches raw regression`);
+
+// ============================================================
+console.log('\n=== Tier-Aware Release Multipliers ===');
+// ============================================================
+
+assertClose(releaseMultiplierForElevation(3600), 1.10, 0.001,
+  'Above equalization threshold (3575): Upper/Equalization Tier = 1.10x');
+assertClose(releaseMultiplierForElevation(3550), 1.00, 0.001,
+  'Mid-elevation (3525-3575): Mid-Tier = 1.00x');
+assertClose(releaseMultiplierForElevation(3510), 0.95, 0.001,
+  'Below DROA (3500-3525): Lower Tier = 0.95x');
+assertClose(releaseMultiplierForElevation(3495), 0.80, 0.001,
+  'Section 6(E) zone (3490-3500): Emergency = 0.80x (6.0 MAF/yr)');
+assertClose(releaseMultiplierForElevation(3480), 0.67, 0.001,
+  'Below min power pool (<3490): Minimum operations = 0.67x');
+
+// ============================================================
+console.log('\n=== Dynamic Releases Reduce Severity of Drawdown ===');
+// ============================================================
+
+const staticForecast = forecast({
+  currentElevation: 3527,
+  currentDate: '2026-04-19',
+  sweApr1: 1034,
+  releaseMultiplier: 1.0,
+  forecastEndDate: '2027-06-01',
+});
+const dynamicForecast = forecast({
+  currentElevation: 3527,
+  currentDate: '2026-04-19',
+  sweApr1: 1034,
+  dynamicReleases: true,
+  forecastEndDate: '2027-06-01',
+});
+
+const staticLow = findLowPoint(staticForecast);
+const dynamicLow = findLowPoint(dynamicForecast);
+console.log(`  Static (1.0x): low = ${staticLow.elevation} ft on ${staticLow.date}`);
+console.log(`  Dynamic tiers: low = ${dynamicLow.elevation} ft on ${dynamicLow.date}`);
+
+assert(dynamicLow.elevation > staticLow.elevation,
+  `Dynamic tiers produce higher low than static (BOR auto-reduces releases): ${dynamicLow.elevation} > ${staticLow.elevation}`);
+
+// ============================================================
+console.log('\n=== DROA Upstream Augmentation ===');
+// ============================================================
+
+const noDroa = forecast({
+  currentElevation: 3527,
+  currentDate: '2026-04-19',
+  sweApr1: 1034,
+  dynamicReleases: true,
+  droaMAF: 0,
+  forecastEndDate: '2027-06-01',
+});
+const withDroa = forecast({
+  currentElevation: 3527,
+  currentDate: '2026-04-19',
+  sweApr1: 1034,
+  dynamicReleases: true,
+  droaMAF: 1.0,  // 1 MAF from Flaming Gorge per April 17, 2026 BOR announcement
+  forecastEndDate: '2027-06-01',
+});
+
+const noDroaLow = findLowPoint(noDroa);
+const withDroaLow = findLowPoint(withDroa);
+console.log(`  No DROA: low = ${noDroaLow.elevation} ft on ${noDroaLow.date}`);
+console.log(`  With 1 MAF DROA: low = ${withDroaLow.elevation} ft on ${withDroaLow.date}`);
+
+assert(withDroaLow.elevation > noDroaLow.elevation,
+  `1 MAF DROA lifts the projected low: ${withDroaLow.elevation} > ${noDroaLow.elevation}`);
+
+// ============================================================
+console.log('\n=== Reconciliation with BOR April 2026 24-Month Study ===');
+// ============================================================
+
+// BOR's Most Probable scenario assumes Apr-Jul 2026 inflow of 1.40 MAF at
+// 22% of avg, with WY2026 inflow of 3.87 MAF. Applying dynamic releases and
+// using a representative SWE should bring our base model within ~30 ft of
+// BOR's monthly projections (it's not an exact match because our calibration
+// is 2020-2025 and BOR's inflow forecast is slightly more generous than our
+// SWE-only regression).
+const borComparable = forecast({
+  currentElevation: 3527,
+  currentDate: '2026-04-19',
+  sweApr1: 1800,  // Representative of BOR's 40% of avg inflow assumption
+  dynamicReleases: true,
+  forecastEndDate: '2027-05-01',
+});
+
+// Find our prediction for end of Dec 2026
+const ourDec = borComparable.find(r => r.date === '2026-12-01');
+const borDec = BOR_APR2026_MOST_PROBABLE.find(r => r.date === '2026-12-31');
+assert(ourDec != null, 'Our forecast includes Dec 2026');
+console.log(`  Dec 2026: ours=${ourDec?.elevation} ft, BOR Most Probable=${borDec.elevation} ft`);
+assertClose(ourDec.elevation, borDec.elevation, 30,
+  `Dec 2026 projection within 30 ft of BOR Most Probable`);
+
+// BOR Most Probable dataset sanity
+assert(BOR_APR2026_MOST_PROBABLE.length === 16,
+  'BOR reference has 16 monthly data points (Apr 2026 - Jul 2027)');
+assert(BOR_APR2026_MOST_PROBABLE[0].elevation > 3500 && BOR_APR2026_MOST_PROBABLE[0].elevation < 3530,
+  'BOR Apr 2026 starting elevation ~3527 ft');
+assert(BOR_APR2026_MOST_PROBABLE[12].elevation < BOR_APR2026_MOST_PROBABLE[0].elevation,
+  'BOR Most Probable shows decline from Apr 2026 to Apr 2027');
 
 // ============================================================
 // Summary

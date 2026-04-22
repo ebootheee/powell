@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-21
+
+### Added
+- `predictSpringNetGain()` now clamps regression output to physical bounds `[-1.5, +8.0]` MAF. Prevents nonsensical extrapolation at very low or high SWE (the raw regression predicted -4.3 MAF at April 2026's SWE ≈ 1,034, which is physically implausible when BOR operating authorities constrain releases)
+- `forecast()` gains two new optional parameters:
+  - `dynamicReleases: boolean` — release multiplier is computed per-step from current elevation using BOR's 2007 Interim Guidelines + 2024 SEIS ROD Section 6(E) tier structure (1.10x above 3,575 → 1.00x above 3,525 → 0.95x above 3,500 → 0.80x above 3,490 → 0.67x below)
+  - `droaMAF: number` — simulates upstream augmentation (Flaming Gorge / Blue Mesa / Navajo per the 2019 DROA) by adding the total evenly over `droaDurationMonths` (default 12)
+- `releaseMultiplierForElevation()` and `droaMonthlyBoost()` helpers exported
+- `BOR_APR2026_MOST_PROBABLE` — 16-month reference dataset from the April 17, 2026 24-Month Study, Model Run ID 3310. Chart now overlays this as a dashed gray reference line
+- Policy scenario toggle on home page: **Fixed releases** (default, historical behavior) / **Auto-tier releases** (dynamic) / **Emergency (Apr 2026)** (dynamic + 1 MAF DROA augmentation)
+- Emergency advisory banner at top of home page citing the April 17, 2026 BOR announcement
+- Methodology page: new sections on Policy Scenarios, Emergency Actions (DROA + Section 6(E)), and Reconciliation with BOR's 24-Month Study
+- 16 new tests covering SWE regression bounds, tier-aware release multipliers, dynamic vs. static drawdown comparison, DROA augmentation, and BOR Dec 2026 reconciliation (60 tests total, all passing)
+
+### Fixed
+- Forecast no longer collapses to dead pool in drought scenarios. Previously, at SWE=1034 our base case projected dead pool (3,370 ft) by December 2026; BOR's Most Probable shows 3,471 ft. With the new clamp + Auto-tier policy, the model matches BOR's December projection within 10 ft when driven by comparable inputs
+
 ## 2026-03-19
 
 ### Added

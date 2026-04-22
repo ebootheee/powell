@@ -78,6 +78,66 @@
   }
   .chart-container canvas { width: 100% !important; height: 100% !important; }
 
+  /* Advisory banner */
+  .advisory {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-left: 3px solid var(--danger);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .advisory strong { color: var(--danger); }
+  .advisory a { color: var(--accent); text-decoration: none; }
+  .advisory a:hover { text-decoration: underline; }
+
+  /* Policy scenario toggle */
+  .policy-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.875rem 1.125rem;
+    margin-bottom: 1rem;
+  }
+  .policy-toggle .label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .policy-toggle .options {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+  .policy-toggle button {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .policy-toggle button:hover { color: var(--text); border-color: var(--text-dim); }
+  .policy-toggle button.active {
+    background: rgba(56,189,248,0.1);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .policy-toggle .detail {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    line-height: 1.4;
+  }
+
   /* Controls */
   .controls {
     display: grid;
@@ -90,6 +150,7 @@
     .container { padding: 1rem; }
     .chart-container { height: 340px; padding: 0.5rem; }
     .header h1 { font-size: 1.25rem; }
+    .policy-toggle button { padding: 0.35rem 0.6rem; font-size: 0.75rem; }
   }
   .control-group {
     background: var(--surface);
@@ -254,6 +315,17 @@
   </div>
 
   <div id="app-content" style="display:none;">
+    <!-- Emergency advisory -->
+    <div class="advisory">
+      <strong>Emergency actions in effect (April 17, 2026).</strong>
+      Reclamation is releasing up to 1 MAF from Flaming Gorge and invoking Section 6(E)
+      of the 2024 SEIS ROD to cut Powell releases from 7.48 to 6.0 MAF through September 2026.
+      Use the <em>Emergency (Apr 2026)</em> scenario below to model these actions. See the
+      <a href="https://www.usbr.gov/newsroom/news-release/5326" target="_blank">BOR press release</a>
+      and the
+      <a href="https://www.circleofblue.org/2026/supply/u-s-government-orders-emergency-actions-to-protect-glen-canyon-dam/" target="_blank">Circle of Blue coverage</a>.
+    </div>
+
     <!-- Hero Stats -->
     <div class="hero">
       <div class="stat-card">
@@ -279,6 +351,17 @@
         <button id="resetZoom" style="font-size:0.75rem;padding:0.25rem 0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:0.375rem;color:var(--text-dim);cursor:pointer;">Reset zoom</button>
       </div>
       <canvas id="mainChart" height="400"></canvas>
+    </div>
+
+    <!-- Policy scenario toggle -->
+    <div class="policy-toggle">
+      <div class="label">Policy Scenario</div>
+      <div class="options" role="tablist">
+        <button type="button" data-policy="static" class="active">Fixed releases</button>
+        <button type="button" data-policy="dynamic">Auto-tier releases</button>
+        <button type="button" data-policy="emergency">Emergency (Apr 2026)</button>
+      </div>
+      <div class="detail" id="policyDetail">Current behavior — release rate stays at slider value regardless of elevation.</div>
     </div>
 
     <!-- Controls -->
@@ -336,6 +419,7 @@ import {
   getCrossedThresholds,
   getNextThresholdBelow,
   THRESHOLDS,
+  BOR_APR2026_MOST_PROBABLE,
 } from './forecast.js';
 
 import { loadAllData } from './data.js';
@@ -345,6 +429,17 @@ import { loadAllData } from './data.js';
 // ============================================================
 let appData = null;
 let mainChart = null;
+
+// Policy scenario state. 'static' = current behavior (fixed releases).
+// 'dynamic' = auto-tier releases based on elevation (BOR tier structure).
+// 'emergency' = dynamic + 1 MAF DROA augmentation (April 17, 2026 actions).
+let currentPolicy = 'static';
+
+const POLICY_DETAILS = {
+  static: 'Release rate stays at slider value regardless of elevation. Useful for isolating SWE and release sensitivity.',
+  dynamic: 'Releases automatically reduce as Lake Powell drops: Mid-Tier → Lower Tier (3,500–3,525) → Section 6(E) emergency (3,490–3,500) → Minimum ops (<3,490). Matches BOR’s 2024 SEIS ROD.',
+  emergency: 'Models the April 17, 2026 BOR emergency actions: auto-tier releases + 1 MAF total upstream augmentation (Flaming Gorge, DROA 2019) distributed over 12 months.',
+};
 
 // ============================================================
 // Threshold colors & annotations
@@ -468,6 +563,20 @@ function createChart(elevationData) {
           tension: 0.3,
           order: 1,
         },
+        {
+          label: 'BOR Apr 2026 Most Probable',
+          data: BOR_APR2026_MOST_PROBABLE.map(d => ({ x: d.date, y: d.elevation })),
+          borderColor: 'rgba(148,163,184,0.8)',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [2, 3],
+          pointRadius: 2,
+          pointBackgroundColor: 'rgba(148,163,184,0.9)',
+          pointHoverRadius: 4,
+          fill: false,
+          tension: 0.2,
+          order: 3,
+        },
       ],
     },
     options: {
@@ -583,6 +692,13 @@ function updateForecast(sweApr1, releaseMultiplier) {
   const currentElev = appData.currentElev.value;
   const currentDate = appData.currentElev.date;
 
+  // Policy-dependent forecast options
+  const forecastOptions = {
+    static:    { dynamicReleases: false, droaMAF: 0 },
+    dynamic:   { dynamicReleases: true,  droaMAF: 0 },
+    emergency: { dynamicReleases: true,  droaMAF: 1.0 }, // April 17, 2026 actions
+  }[currentPolicy];
+
   // Run 3 scenarios
   const scenarios = [
     { swe: Math.round(sweApr1 * 0.75), idx: 1 }, // dry
@@ -598,6 +714,7 @@ function updateForecast(sweApr1, releaseMultiplier) {
       currentDate: currentDate,
       sweApr1: s.swe,
       releaseMultiplier,
+      ...forecastOptions,
       forecastEndDate: getEndDate(currentDate),
     });
 
@@ -673,9 +790,10 @@ function updateForecastDisplay(low, currentElev) {
   // Forecast timestamp
   const sweVal = document.getElementById('sweSlider').value;
   const relVal = parseFloat(document.getElementById('releaseSlider').value).toFixed(2);
+  const policyLabel = { static: 'Fixed', dynamic: 'Auto-tier', emergency: 'Emergency' }[currentPolicy];
   const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   document.getElementById('forecast-params').textContent =
-    `Forecast with SWE ${sweVal} / Release ${relVal}x \u00B7 Generated ${now}`;
+    `${policyLabel} releases \u00B7 SWE ${sweVal} / Slider ${relVal}x \u00B7 Generated ${now}`;
 
   // Threshold list
   const list = document.getElementById('threshold-list');
@@ -763,6 +881,22 @@ function setupSliders() {
 
   sweSlider.addEventListener('input', onSliderChange);
   releaseSlider.addEventListener('input', onSliderChange);
+
+  // Policy toggle
+  const policyButtons = document.querySelectorAll('.policy-toggle button[data-policy]');
+  const policyDetail = document.getElementById('policyDetail');
+  for (const btn of policyButtons) {
+    btn.addEventListener('click', () => {
+      const policy = btn.dataset.policy;
+      if (policy === currentPolicy) return;
+      currentPolicy = policy;
+      for (const b of policyButtons) b.classList.toggle('active', b === btn);
+      policyDetail.textContent = POLICY_DETAILS[policy];
+      onSliderChange();
+    });
+  }
+  // Initialize detail text
+  policyDetail.textContent = POLICY_DETAILS[currentPolicy];
 
   // Initial run
   onSliderChange();

@@ -184,6 +184,8 @@
         <li><a href="#how-it-works">How the Forecast Works</a></li>
         <li><a href="#accuracy">How Accurate Is It?</a></li>
         <li><a href="#outlook">Current 2026 Outlook</a></li>
+        <li><a href="#policy">Policy Scenarios &amp; Emergency Actions</a></li>
+        <li><a href="#reconciliation">Reconciliation with BOR 24-Month Study</a></li>
         <li><a href="#limitations">Limitations</a></li>
       </ul>
     </div>
@@ -381,25 +383,126 @@
     <!-- ====== Current Forecast ====== -->
     <h2 id="outlook">Current 2026 Outlook</h2>
     <p>
-      As of March 2026, Lake Powell sits at <strong>3,529.4 ft</strong> with snowpack running at roughly
-      <strong>56% of the April 1 median</strong>. Under moderate assumptions, the model projects a low
-      point around <strong>3,488 ft by early 2027</strong> &mdash; just below minimum power pool (3,490 ft).
+      As of April 19, 2026, Lake Powell sits at <strong>3,527 ft</strong> &mdash; less than
+      25% full. Basin snowpack collapsed in late winter: April 1 SWE averaged about
+      <strong>1,168 tenths-mm across our 10 stations (roughly 32% of the 2020&ndash;2025 median)</strong>,
+      and a record-breaking March heat wave accelerated melt. The April 2026 Colorado Basin
+      River Forecast Center projects Apr&ndash;Jul unregulated inflow of only <strong>1.40 MAF
+      (22% of average)</strong> and water-year total of <strong>3.87 MAF (40% of average)</strong>
+      under the Most Probable scenario.
     </p>
     <p>
-      This aligns directionally with the Bureau of Reclamation's own January 2026 24-Month Study, which
-      projects 3,497 ft (most probable) to 3,479 ft (dry scenario) by end of 2026.
+      The Bureau of Reclamation's <a href="https://www.usbr.gov/lc/region/g4000/24mo.pdf" target="_blank">April
+      2026 Most Probable 24-Month Study</a> projects Lake Powell to decline from 3,527 ft today
+      to a low of approximately <strong>3,456 ft in March 2027</strong>, with recovery beginning
+      in May 2027 once spring runoff arrives. That trajectory crosses minimum power pool
+      (3,490 ft) in August 2026 without intervention.
+    </p>
+
+    <!-- ====== Policy Scenarios ====== -->
+    <h2 id="policy">Policy Scenarios &amp; Emergency Actions</h2>
+    <p>
+      On <strong>April 17, 2026</strong>, Secretary of the Interior Doug Burgum and Reclamation
+      announced unprecedented emergency actions to protect Glen Canyon Dam (see
+      <a href="https://www.usbr.gov/newsroom/news-release/5326" target="_blank">BOR news release</a>
+      and <a href="https://www.circleofblue.org/2026/supply/u-s-government-orders-emergency-actions-to-protect-glen-canyon-dam/" target="_blank">Circle of Blue's reporting</a>):
+    </p>
+    <ul>
+      <li>
+        <strong>Flaming Gorge release (DROA, 2019):</strong> 660,000 to 1,000,000 acre-feet from
+        Flaming Gorge Reservoir to Lake Powell, April 2026 &ndash; April 2027. Flaming Gorge is
+        currently 83% full (3.1 MAF storage); it will decline ~35 ft and end at roughly 59% full.
+      </li>
+      <li>
+        <strong>Section 6(E) release cut (2024 SEIS ROD):</strong> Reduce Lake Powell releases from
+        7.48 to <strong>6.0 MAF</strong> through September 2026 &mdash; a 1.48 MAF reduction. This
+        is the first time Reclamation has invoked Section 6(E) authority.
+      </li>
+    </ul>
+    <p>
+      The combined intervention adds approximately <strong>2.48 MAF</strong> to Lake Powell and
+      is expected to lift the elevation about <strong>54 ft above the Most Probable trajectory</strong>,
+      targeting <em>at least 3,500 ft by April 2027</em>. The press release acknowledges Powell
+      is expected to stay above 3,500 ft "but just barely" &mdash; a narrow margin that depends on
+      average conditions continuing.
+    </p>
+    <p>
+      The app's <strong>Policy Scenario</strong> selector models these regimes:
+    </p>
+    <ul>
+      <li><strong>Fixed releases</strong> &mdash; the historical default: release rate stays at the
+        slider value regardless of elevation. Useful for isolating SWE and release sensitivity.</li>
+      <li><strong>Auto-tier releases</strong> &mdash; releases drop automatically as elevation falls,
+        matching BOR's 2024 SEIS ROD tier structure (Mid-Tier → Lower Tier → Section 6(E) emergency
+        → minimum ops). Most realistic baseline without emergency upstream releases.</li>
+      <li><strong>Emergency (Apr 2026)</strong> &mdash; Auto-tier releases plus 1 MAF of upstream
+        augmentation distributed over 12 months. Simulates the effect of the April 17 announcement.</li>
+    </ul>
+
+    <!-- ====== Reconciliation ====== -->
+    <h2 id="reconciliation">Reconciliation with BOR's 24-Month Study</h2>
+    <p>
+      The Bureau of Reclamation publishes monthly 24-Month Studies using the CRSS model, which
+      is the authoritative federal projection for Lake Powell and Lake Mead operations. The
+      April 2026 Most Probable scenario projects end-of-month elevations that are overlaid on
+      our chart as a dashed gray reference line.
+    </p>
+    <p>
+      Our mass-balance model and BOR's CRSS differ in important ways:
+    </p>
+    <ul>
+      <li>
+        <strong>Inflow forecasting.</strong> BOR uses the NOAA Colorado Basin River Forecast Center's
+        probabilistic runoff ensembles; we use a linear regression on April 1 SWE across 10 SNOTEL
+        stations, calibrated on 2020&ndash;2025 data (R&sup2; = 0.899).
+      </li>
+      <li>
+        <strong>Release policy.</strong> BOR's CRSS models the tier structure explicitly, including
+        Section 6(E) authority. Our model requires the user to select <em>Auto-tier</em> or
+        <em>Emergency</em> mode to activate tier-based reductions.
+      </li>
+      <li>
+        <strong>SWE regression bounds.</strong> Our regression is calibrated on SWE values of
+        3,356&ndash;5,527. Outside that range, linear extrapolation diverges from physical reality
+        &mdash; at April 2026's SWE near 1,000, the raw regression predicts a spring net change of
+        &minus;4.3 MAF, while physical lower bound (BOR April&ndash;July inflow 1.4 MAF minus
+        Mid-Tier releases 1.87 MAF minus evap) is closer to &minus;0.6 MAF. The model clamps the
+        regression output to [&minus;1.5, +8.0] MAF to prevent extrapolation beyond what BOR
+        operating authorities would permit.
+      </li>
+      <li>
+        <strong>Bank storage and evaporation.</strong> BOR tracks both explicitly; our calibration
+        bakes them into the monthly net-change averages, which is less accurate for extreme years.
+      </li>
+    </ul>
+    <p>
+      When driven by BOR-comparable inputs (SWE equivalent to 40% of average, Auto-tier policy),
+      the model projects Lake Powell at approximately 3,480 ft in December 2026 &mdash; within
+      10 ft of BOR's Most Probable (3,471 ft). Large divergences appear at the tails (very dry or
+      very wet years) where the SWE regression is extrapolating.
     </p>
 
     <!-- ====== Limitations ====== -->
     <h2 id="limitations">Limitations</h2>
     <ul>
       <li>
-        <strong>Static release rates.</strong> The model uses average monthly decline rates, not dynamic
-        release schedules. If BOR changes operating tiers mid-year, accuracy will degrade.
+        <strong>Release regime is a user choice.</strong> In <em>Fixed releases</em> mode the model uses
+        a constant multiplier regardless of elevation; in <em>Auto-tier</em> it switches between tiers
+        at 3,575 / 3,525 / 3,500 / 3,490 ft. Real BOR tier transitions can lag by a month or two, and
+        the Secretary retains discretion below 3,500 ft.
       </li>
       <li>
-        <strong>Limited calibration period.</strong> The SWE regression has only 6 years of calibration data
-        (2020&ndash;2025). More data will improve confidence, especially for extreme wet or dry years.
+        <strong>Limited calibration period.</strong> The SWE regression has only 6 years of calibration
+        data (2020&ndash;2025). The 2026 season &mdash; with SWE near 32% of that period's median &mdash;
+        is far outside the calibration range, which is why the model now clamps the regression output
+        to [&minus;1.5, +8.0] MAF. The clamp prevents physically implausible predictions but obscures
+        genuine uncertainty at the extremes.
+      </li>
+      <li>
+        <strong>DROA shape is simplified.</strong> In <em>Emergency</em> mode, the 1 MAF of upstream
+        augmentation is distributed evenly across 12 months. Real releases from Flaming Gorge are
+        concentrated in summer/fall to support Powell during peak decline, so the true timing impact
+        on elevation may differ month-to-month.
       </li>
       <li>
         <strong>No bank storage.</strong> The model doesn't account for bank storage &mdash; the sandstone
@@ -407,12 +510,19 @@
         as a buffer that dampens swings.
       </li>
       <li>
-        <strong>Early-season SWE projection.</strong> Before April 1, the model projects current SWE readings
-        forward using a simple scaling factor. This adds uncertainty early in the snowpack season.
+        <strong>Single-year horizon only.</strong> The model projects 16-18 months forward but doesn't
+        account for the fact that emergency upstream releases deplete Flaming Gorge &mdash; reducing
+        the buffer available for subsequent years. The April 2026 emergency actions buy time; they
+        do not solve the multi-year structural deficit.
       </li>
       <li>
-        <strong>Not an operational forecast.</strong> This is an educational and analytical tool. The Bureau
-        of Reclamation's <a href="https://www.usbr.gov/lc/region/g4000/24mo/index.html">24-Month Study</a>
+        <strong>Early-season SWE projection.</strong> Before April 1, the model projects current SWE
+        readings forward using a simple scaling factor. This adds uncertainty early in the snowpack
+        season.
+      </li>
+      <li>
+        <strong>Not an operational forecast.</strong> This is an educational and analytical tool. The
+        Bureau of Reclamation's <a href="https://www.usbr.gov/lc/region/g4000/24mo/index.html">24-Month Study</a>
         is the authoritative source for operational planning.
       </li>
     </ul>
@@ -427,7 +537,15 @@
         Data sources:
         <a href="https://waterservices.usgs.gov/rest/IV-Service.html">USGS Water Services</a> &middot;
         <a href="https://www.ncei.noaa.gov/cdo-web/">NOAA Climate Data Online</a> &middot;
-        <a href="https://www.usbr.gov/lc/region/g4000/24mo/index.html">Bureau of Reclamation 24-Month Study</a>
+        <a href="https://www.usbr.gov/lc/region/g4000/24mo/index.html">Bureau of Reclamation 24-Month Study</a> &middot;
+        <a href="https://www.cbrfc.noaa.gov/product/hydrofcst/hydrofcst.php">CBRFC Runoff Forecast</a>
+      </p>
+      <p style="margin-top: 0.5rem;">
+        Policy references:
+        <a href="https://www.usbr.gov/newsroom/news-release/5326">BOR April 17, 2026 news release</a> &middot;
+        <a href="https://www.usbr.gov/ColoradoRiverBasin/documents/NearTermColoradoRiverOperations/20240507-Near-termColoradoRiverOperations-SEIS-RecordofDecision-signed_508.pdf">2024 SEIS ROD (Section 6(E))</a> &middot;
+        <a href="https://www.usbr.gov/ColoradoRiverBasin/dcp/finaldocs.html">2019 Drought Contingency Plans (DROA)</a> &middot;
+        <a href="https://www.circleofblue.org/2026/supply/u-s-government-orders-emergency-actions-to-protect-glen-canyon-dam/">Circle of Blue: Emergency Actions (Apr 19, 2026)</a>
       </p>
     </footer>
 

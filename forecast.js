@@ -134,13 +134,32 @@ const SWE_REGRESSION = linearRegression(
   SWE_INFLOW_PAIRS.map(d => ({ x: d.swe, y: d.netGainMAF }))
 );
 
+// Physical bounds for the SWE regression output.
+// The regression is calibrated on 2020-2025 SWE values of 3,356-5,527. For
+// SWE values far outside that range the linear extrapolation diverges from
+// physical reality. Bounds here reflect historical observation:
+//   Floor: even in the 2002 drought (driest year since 1963), Apr-Jul
+//     unregulated inflow was ~2.4 MAF. With Mid-Tier releases (~1.87 MAF)
+//     and evap (~0.15 MAF) the net change is ~+0.4 MAF. If BOR stays at
+//     full releases while inflow collapses further, the realistic minimum
+//     net change is around -1.5 MAF before Section 6(E) emergency tools
+//     are invoked (see BOR 2024 SEIS ROD).
+//   Ceiling: 2023 was the wettest year in the calibration set (+4.0 MAF);
+//     8.0 MAF caps occasional wet-year runaway predictions.
+const NET_GAIN_FLOOR_MAF = -1.5;
+const NET_GAIN_CEILING_MAF = 8.0;
+
 /**
  * Predict net storage gain (MAF) from April 1 SWE
  * @param {number} sweApr1 - Basin-average April 1 SWE in tenths of mm
+ * @param {{floor?: number, ceiling?: number}} [options]
  * @returns {number} Net storage gain in MAF (inflow minus releases during Apr-Jul)
  */
-function predictSpringNetGain(sweApr1) {
-  return SWE_REGRESSION.slope * sweApr1 + SWE_REGRESSION.intercept;
+function predictSpringNetGain(sweApr1, options = {}) {
+  const raw = SWE_REGRESSION.slope * sweApr1 + SWE_REGRESSION.intercept;
+  const floor = options.floor ?? NET_GAIN_FLOOR_MAF;
+  const ceiling = options.ceiling ?? NET_GAIN_CEILING_MAF;
+  return Math.max(floor, Math.min(ceiling, raw));
 }
 
 
@@ -173,6 +192,65 @@ const SPRING_DISTRIBUTION = { 5: 0.35, 6: 0.45, 7: 0.20 };
 
 
 // ============================================================
+// Tier-Aware Release Logic (BOR 2007 Interim Guidelines + 2024 SEIS ROD)
+// ============================================================
+
+// When elevation drops, BOR's tier structure automatically reduces releases.
+// These multipliers scale our monthly net-change values (which are calibrated
+// at ~7.48 MAF/yr Mid-Elevation Tier releases). See:
+//   - 2007 Interim Guidelines Section 6.C (tier structure)
+//   - 2024 Interim Guidelines SEIS ROD Section 6.E (Reclamation's authority
+//     to reduce Powell releases below 7.0 MAF to avoid 3,500 ft — first
+//     invoked in the April 17, 2026 emergency actions)
+//
+// The multiplier is applied to monthly decline rates. A multiplier of 0.80
+// means releases are 80% of calibration baseline, so declines are 80% as
+// fast. Spring gain is unaffected (spring gain already nets inflow against
+// releases during the calibration period).
+const RELEASE_TIERS = [
+  { minElev: 3575, multiplier: 1.10, name: 'Equalization / Upper Tier' },
+  { minElev: 3525, multiplier: 1.00, name: 'Mid-Elevation Tier' },
+  { minElev: 3500, multiplier: 0.95, name: 'Lower Tier (pre-emergency)' },
+  { minElev: 3490, multiplier: 0.80, name: 'Section 6(E) Emergency (6.0 MAF/yr)' },
+  { minElev: 0,    multiplier: 0.67, name: 'Below Min Power Pool' },
+];
+
+/**
+ * Return release multiplier for a given elevation per BOR tier structure
+ */
+function releaseMultiplierForElevation(elevation) {
+  for (const tier of RELEASE_TIERS) {
+    if (elevation >= tier.minElev) return tier.multiplier;
+  }
+  return RELEASE_TIERS[RELEASE_TIERS.length - 1].multiplier;
+}
+
+
+// ============================================================
+// DROA Upstream Augmentation (Drought Response Operating Agreement, 2019)
+// ============================================================
+
+// When Powell is at risk, upstream reservoirs (Flaming Gorge, Blue Mesa,
+// Navajo) can release water to Powell. The April 17, 2026 BOR press release
+// announced 660 KAF to 1 MAF from Flaming Gorge over April 2026 - April 2027.
+// This is modeled as an evenly-distributed monthly boost to net storage.
+//
+// Distribution shape here is approximately uniform — in reality DROA releases
+// are concentrated in summer/fall to support Powell during peak decline.
+// Approximation chosen for simplicity; users can override shape via params.
+
+/**
+ * Compute the monthly DROA augmentation in MAF for a given (year, month),
+ * given a total annual augmentation, distributed across 12 months starting
+ * from the forecast start month.
+ */
+function droaMonthlyBoost(totalMAF, monthsElapsed, durationMonths = 12) {
+  if (!totalMAF || monthsElapsed >= durationMonths) return 0;
+  return totalMAF / durationMonths;
+}
+
+
+// ============================================================
 // Main Forecast Function
 // ============================================================
 
@@ -181,7 +259,10 @@ const SPRING_DISTRIBUTION = { 5: 0.35, 6: 0.45, 7: 0.20 };
  * @property {number} currentElevation - Current water level (ft)
  * @property {string} currentDate - Current date (YYYY-MM-DD)
  * @property {number} sweApr1 - April 1 SWE forecast (tenths mm). If before April 1, this is projected/current SWE.
- * @property {number} [releaseMultiplier=1.0] - Multiplier on default decline rates (1.0 = normal, 0.8 = reduced releases)
+ * @property {number} [releaseMultiplier=1.0] - Multiplier on default decline rates (1.0 = normal, 0.8 = reduced releases). Ignored if dynamicReleases=true.
+ * @property {boolean} [dynamicReleases=false] - If true, release multiplier is derived per-step from current elevation via BOR tier structure
+ * @property {number} [droaMAF=0] - Total upstream augmentation (MAF) distributed across droaDurationMonths
+ * @property {number} [droaDurationMonths=12] - Duration over which to distribute DROA releases
  * @property {string} [forecastEndDate] - End date for forecast (default: 18 months out)
  */
 
@@ -203,6 +284,9 @@ function forecast(params) {
     currentDate,
     sweApr1,
     releaseMultiplier = 1.0,
+    dynamicReleases = false,
+    droaMAF = 0,
+    droaDurationMonths = 12,
     forecastEndDate,
   } = params;
 
@@ -211,7 +295,7 @@ function forecast(params) {
   endDefault.setMonth(endDefault.getMonth() + 18);
   const end = forecastEndDate ? new Date(forecastEndDate) : endDefault;
 
-  // Compute spring net gain from SWE
+  // Compute spring net gain from SWE (clamped to physical bounds)
   const springNetGainMAF = predictSpringNetGain(sweApr1);
 
   // Convert spring net gain (MAF) to elevation gain using current-level sensitivity
@@ -225,9 +309,16 @@ function forecast(params) {
   // Start from the first of next month
   date.setMonth(date.getMonth() + 1);
 
+  let monthsElapsed = 0;
+
   while (date <= end) {
     const month = date.getMonth() + 1; // 1-12
     const year = date.getFullYear();
+
+    // Determine release multiplier for this step
+    const effectiveReleaseMultiplier = dynamicReleases
+      ? releaseMultiplierForElevation(currentElev)
+      : releaseMultiplier;
 
     let monthlyChangeMAF;
 
@@ -240,9 +331,12 @@ function forecast(params) {
       monthlyChangeMAF = MONTHLY_NET_STORAGE_MAF[month];
       // Apply release multiplier (>1 = more releases = faster decline)
       if (monthlyChangeMAF < 0) {
-        monthlyChangeMAF *= releaseMultiplier;
+        monthlyChangeMAF *= effectiveReleaseMultiplier;
       }
     }
+
+    // Add DROA upstream augmentation if configured
+    monthlyChangeMAF += droaMonthlyBoost(droaMAF, monthsElapsed, droaDurationMonths);
 
     currentStorage += monthlyChangeMAF;
     // Clamp to valid range
@@ -258,6 +352,7 @@ function forecast(params) {
     });
 
     date.setMonth(date.getMonth() + 1);
+    monthsElapsed++;
   }
 
   return results;
@@ -327,6 +422,49 @@ function getNextThresholdBelow(elevation) {
 
 
 // ============================================================
+// BOR April 2026 24-Month Study — Reference Projection
+// ============================================================
+
+// End-of-month Lake Powell elevations from the April 17, 2026 Most Probable
+// 24-Month Study published by the Bureau of Reclamation (Model Run ID 3310,
+// processed 4/10/2026). This is the authoritative federal projection prior
+// to the April 17 emergency actions.
+//
+// Source: https://www.usbr.gov/lc/region/g4000/24mo.pdf (archived)
+// Note: The Most Probable scenario assumes WY2026 unregulated inflow of
+// 3.87 MAF (40% of 1991-2020 avg) and full 7.48 MAF annual releases (Mid-
+// Elevation Tier). Does NOT yet incorporate the April 17 emergency release
+// reduction (Section 6(E)) or Flaming Gorge augmentation.
+const BOR_APR2026_MOST_PROBABLE = [
+  { date: '2026-04-30', elevation: 3527.43 },
+  { date: '2026-05-31', elevation: 3524.10 },
+  { date: '2026-06-30', elevation: 3515.79 },
+  { date: '2026-07-31', elevation: 3503.60 },
+  { date: '2026-08-31', elevation: 3491.64 },
+  { date: '2026-09-30', elevation: 3483.15 },
+  { date: '2026-10-31', elevation: 3479.67 },
+  { date: '2026-11-30', elevation: 3476.54 },
+  { date: '2026-12-31', elevation: 3471.06 },
+  { date: '2027-01-31', elevation: 3463.62 },
+  { date: '2027-02-28', elevation: 3458.56 },
+  { date: '2027-03-31', elevation: 3455.80 },
+  { date: '2027-04-30', elevation: 3460.52 },
+  { date: '2027-05-31', elevation: 3489.39 },
+  { date: '2027-06-30', elevation: 3512.96 },
+  { date: '2027-07-31', elevation: 3513.72 },
+];
+
+// BOR's stated intervention scenario — after April 17, 2026 emergency actions
+// (Flaming Gorge release ~1 MAF + Section 6(E) cut of 1.48 MAF).
+// Target stated in the press release: "at least 3,500 feet by April 2027."
+const BOR_APR2026_EMERGENCY_TARGET = {
+  date: '2027-04-30',
+  elevation: 3500,
+  source: 'BOR press release, April 17, 2026',
+};
+
+
+// ============================================================
 // Exports
 // ============================================================
 
@@ -338,11 +476,18 @@ export {
   findLowPoint,
   getCrossedThresholds,
   getNextThresholdBelow,
+  releaseMultiplierForElevation,
+  droaMonthlyBoost,
   THRESHOLDS,
   ELEV_STORAGE_TABLE,
   SWE_REGRESSION,
   SWE_INFLOW_PAIRS,
   CALIBRATION_DATA,
   MONTHLY_NET_STORAGE_MAF,
+  RELEASE_TIERS,
+  NET_GAIN_FLOOR_MAF,
+  NET_GAIN_CEILING_MAF,
+  BOR_APR2026_MOST_PROBABLE,
+  BOR_APR2026_EMERGENCY_TARGET,
   linearRegression,
 };
