@@ -1,0 +1,628 @@
+{
+  "generatedAt": "2026-06-04T07:48:44.291Z",
+  "date": "2026-06-04",
+  "inputs": {
+    "currentElevation": 3527.7,
+    "currentDate": "2026-06-02",
+    "projectedSWE": 4,
+    "medianApr1SWE": 3686,
+    "currentSWE": 3
+  },
+  "scenarios": {
+    "dry": {
+      "swe": 3,
+      "releaseMultiplier": 1,
+      "projections": [
+        {
+          "date": "2026-07-01",
+          "elevation": 3504,
+          "storage": 5.639
+        },
+        {
+          "date": "2026-08-01",
+          "elevation": 3496.5,
+          "storage": 5.284
+        },
+        {
+          "date": "2026-09-01",
+          "elevation": 3492.3,
+          "storage": 5.102
+        },
+        {
+          "date": "2026-10-01",
+          "elevation": 3490.7,
+          "storage": 5.029
+        },
+        {
+          "date": "2026-11-01",
+          "elevation": 3487.1,
+          "storage": 4.882
+        },
+        {
+          "date": "2026-12-01",
+          "elevation": 3481.6,
+          "storage": 4.657
+        },
+        {
+          "date": "2027-01-01",
+          "elevation": 3474.4,
+          "storage": 4.384
+        },
+        {
+          "date": "2027-02-01",
+          "elevation": 3468.3,
+          "storage": 4.163
+        },
+        {
+          "date": "2027-03-01",
+          "elevation": 3463.8,
+          "storage": 4
+        },
+        {
+          "date": "2027-04-01",
+          "elevation": 3462.7,
+          "storage": 3.959
+        },
+        {
+          "date": "2027-05-01",
+          "elevation": 3378.5,
+          "storage": 1.848
+        },
+        {
+          "date": "2027-06-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-07-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-08-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-09-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-10-01",
+          "elevation": 3370,
+          "storage": 1.71
+        }
+      ],
+      "lowPoint": {
+        "date": "2027-06-01",
+        "elevation": 3370,
+        "storage": 1.71
+      },
+      "crossedThresholds": [
+        {
+          "elevation": 3700,
+          "label": "Full Pool",
+          "severity": "safe"
+        },
+        {
+          "elevation": 3575,
+          "label": "Upper/Mid Tier Boundary",
+          "severity": "caution"
+        },
+        {
+          "elevation": 3525,
+          "label": "DROA Protection Target",
+          "severity": "warning"
+        },
+        {
+          "elevation": 3500,
+          "label": "Emergency Operations",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3490,
+          "label": "Min Power Pool",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3470,
+          "label": "Penstock Intake",
+          "severity": "critical"
+        }
+      ]
+    },
+    "base": {
+      "swe": 4,
+      "releaseMultiplier": 1,
+      "projections": [
+        {
+          "date": "2026-07-01",
+          "elevation": 3504,
+          "storage": 5.64
+        },
+        {
+          "date": "2026-08-01",
+          "elevation": 3496.5,
+          "storage": 5.285
+        },
+        {
+          "date": "2026-09-01",
+          "elevation": 3492.3,
+          "storage": 5.103
+        },
+        {
+          "date": "2026-10-01",
+          "elevation": 3490.7,
+          "storage": 5.03
+        },
+        {
+          "date": "2026-11-01",
+          "elevation": 3487.1,
+          "storage": 4.883
+        },
+        {
+          "date": "2026-12-01",
+          "elevation": 3481.7,
+          "storage": 4.658
+        },
+        {
+          "date": "2027-01-01",
+          "elevation": 3474.4,
+          "storage": 4.385
+        },
+        {
+          "date": "2027-02-01",
+          "elevation": 3468.3,
+          "storage": 4.164
+        },
+        {
+          "date": "2027-03-01",
+          "elevation": 3463.9,
+          "storage": 4.001
+        },
+        {
+          "date": "2027-04-01",
+          "elevation": 3462.7,
+          "storage": 3.96
+        },
+        {
+          "date": "2027-05-01",
+          "elevation": 3378.5,
+          "storage": 1.849
+        },
+        {
+          "date": "2027-06-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-07-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-08-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-09-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-10-01",
+          "elevation": 3370,
+          "storage": 1.71
+        }
+      ],
+      "lowPoint": {
+        "date": "2027-06-01",
+        "elevation": 3370,
+        "storage": 1.71
+      },
+      "crossedThresholds": [
+        {
+          "elevation": 3700,
+          "label": "Full Pool",
+          "severity": "safe"
+        },
+        {
+          "elevation": 3575,
+          "label": "Upper/Mid Tier Boundary",
+          "severity": "caution"
+        },
+        {
+          "elevation": 3525,
+          "label": "DROA Protection Target",
+          "severity": "warning"
+        },
+        {
+          "elevation": 3500,
+          "label": "Emergency Operations",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3490,
+          "label": "Min Power Pool",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3470,
+          "label": "Penstock Intake",
+          "severity": "critical"
+        }
+      ]
+    },
+    "wet": {
+      "swe": 5,
+      "releaseMultiplier": 1,
+      "projections": [
+        {
+          "date": "2026-07-01",
+          "elevation": 3504,
+          "storage": 5.64
+        },
+        {
+          "date": "2026-08-01",
+          "elevation": 3496.5,
+          "storage": 5.285
+        },
+        {
+          "date": "2026-09-01",
+          "elevation": 3492.3,
+          "storage": 5.103
+        },
+        {
+          "date": "2026-10-01",
+          "elevation": 3490.7,
+          "storage": 5.03
+        },
+        {
+          "date": "2026-11-01",
+          "elevation": 3487.1,
+          "storage": 4.883
+        },
+        {
+          "date": "2026-12-01",
+          "elevation": 3481.7,
+          "storage": 4.658
+        },
+        {
+          "date": "2027-01-01",
+          "elevation": 3474.4,
+          "storage": 4.385
+        },
+        {
+          "date": "2027-02-01",
+          "elevation": 3468.3,
+          "storage": 4.164
+        },
+        {
+          "date": "2027-03-01",
+          "elevation": 3463.9,
+          "storage": 4.001
+        },
+        {
+          "date": "2027-04-01",
+          "elevation": 3462.7,
+          "storage": 3.96
+        },
+        {
+          "date": "2027-05-01",
+          "elevation": 3378.6,
+          "storage": 1.85
+        },
+        {
+          "date": "2027-06-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-07-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-08-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-09-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-10-01",
+          "elevation": 3370,
+          "storage": 1.71
+        }
+      ],
+      "lowPoint": {
+        "date": "2027-06-01",
+        "elevation": 3370,
+        "storage": 1.71
+      },
+      "crossedThresholds": [
+        {
+          "elevation": 3700,
+          "label": "Full Pool",
+          "severity": "safe"
+        },
+        {
+          "elevation": 3575,
+          "label": "Upper/Mid Tier Boundary",
+          "severity": "caution"
+        },
+        {
+          "elevation": 3525,
+          "label": "DROA Protection Target",
+          "severity": "warning"
+        },
+        {
+          "elevation": 3500,
+          "label": "Emergency Operations",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3490,
+          "label": "Min Power Pool",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3470,
+          "label": "Penstock Intake",
+          "severity": "critical"
+        }
+      ]
+    },
+    "base_high_release": {
+      "swe": 4,
+      "releaseMultiplier": 1.2,
+      "projections": [
+        {
+          "date": "2026-07-01",
+          "elevation": 3499.1,
+          "storage": 5.399
+        },
+        {
+          "date": "2026-08-01",
+          "elevation": 3489.3,
+          "storage": 4.973
+        },
+        {
+          "date": "2026-09-01",
+          "elevation": 3484,
+          "storage": 4.754
+        },
+        {
+          "date": "2026-10-01",
+          "elevation": 3481.9,
+          "storage": 4.667
+        },
+        {
+          "date": "2026-11-01",
+          "elevation": 3477.3,
+          "storage": 4.49
+        },
+        {
+          "date": "2026-12-01",
+          "elevation": 3469.9,
+          "storage": 4.22
+        },
+        {
+          "date": "2027-01-01",
+          "elevation": 3460.9,
+          "storage": 3.893
+        },
+        {
+          "date": "2027-02-01",
+          "elevation": 3452.7,
+          "storage": 3.627
+        },
+        {
+          "date": "2027-03-01",
+          "elevation": 3446.6,
+          "storage": 3.432
+        },
+        {
+          "date": "2027-04-01",
+          "elevation": 3445.1,
+          "storage": 3.383
+        },
+        {
+          "date": "2027-05-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-06-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-07-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-08-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-09-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-10-01",
+          "elevation": 3370,
+          "storage": 1.71
+        }
+      ],
+      "lowPoint": {
+        "date": "2027-05-01",
+        "elevation": 3370,
+        "storage": 1.71
+      },
+      "crossedThresholds": [
+        {
+          "elevation": 3700,
+          "label": "Full Pool",
+          "severity": "safe"
+        },
+        {
+          "elevation": 3575,
+          "label": "Upper/Mid Tier Boundary",
+          "severity": "caution"
+        },
+        {
+          "elevation": 3525,
+          "label": "DROA Protection Target",
+          "severity": "warning"
+        },
+        {
+          "elevation": 3500,
+          "label": "Emergency Operations",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3490,
+          "label": "Min Power Pool",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3470,
+          "label": "Penstock Intake",
+          "severity": "critical"
+        }
+      ]
+    },
+    "base_low_release": {
+      "swe": 4,
+      "releaseMultiplier": 0.8,
+      "projections": [
+        {
+          "date": "2026-07-01",
+          "elevation": 3508.9,
+          "storage": 5.881
+        },
+        {
+          "date": "2026-08-01",
+          "elevation": 3503.2,
+          "storage": 5.597
+        },
+        {
+          "date": "2026-09-01",
+          "elevation": 3500.2,
+          "storage": 5.451
+        },
+        {
+          "date": "2026-10-01",
+          "elevation": 3498.9,
+          "storage": 5.393
+        },
+        {
+          "date": "2026-11-01",
+          "elevation": 3496.3,
+          "storage": 5.275
+        },
+        {
+          "date": "2026-12-01",
+          "elevation": 3492.2,
+          "storage": 5.095
+        },
+        {
+          "date": "2027-01-01",
+          "elevation": 3487,
+          "storage": 4.877
+        },
+        {
+          "date": "2027-02-01",
+          "elevation": 3482.7,
+          "storage": 4.7
+        },
+        {
+          "date": "2027-03-01",
+          "elevation": 3479.4,
+          "storage": 4.57
+        },
+        {
+          "date": "2027-04-01",
+          "elevation": 3478.5,
+          "storage": 4.537
+        },
+        {
+          "date": "2027-05-01",
+          "elevation": 3426.5,
+          "storage": 2.849
+        },
+        {
+          "date": "2027-06-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-07-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-08-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-09-01",
+          "elevation": 3370,
+          "storage": 1.71
+        },
+        {
+          "date": "2027-10-01",
+          "elevation": 3370,
+          "storage": 1.71
+        }
+      ],
+      "lowPoint": {
+        "date": "2027-06-01",
+        "elevation": 3370,
+        "storage": 1.71
+      },
+      "crossedThresholds": [
+        {
+          "elevation": 3700,
+          "label": "Full Pool",
+          "severity": "safe"
+        },
+        {
+          "elevation": 3575,
+          "label": "Upper/Mid Tier Boundary",
+          "severity": "caution"
+        },
+        {
+          "elevation": 3525,
+          "label": "DROA Protection Target",
+          "severity": "warning"
+        },
+        {
+          "elevation": 3500,
+          "label": "Emergency Operations",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3490,
+          "label": "Min Power Pool",
+          "severity": "danger"
+        },
+        {
+          "elevation": 3470,
+          "label": "Penstock Intake",
+          "severity": "critical"
+        }
+      ]
+    }
+  }
+}
