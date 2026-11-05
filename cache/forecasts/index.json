@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-04T06:17:20.918Z",
-  "count": 219,
+  "generatedAt": "2026-11-05T06:17:26.097Z",
+  "count": 220,
   "snapshots": [
     {
       "date": "2026-03-19",
@@ -1532,6 +1532,13 @@
       "date": "2026-11-04",
       "currentElevation": 3532.5,
       "projectedSWE": 186,
+      "baseLow": 3370,
+      "baseLowDate": "2027-06-01"
+    },
+    {
+      "date": "2026-11-05",
+      "currentElevation": 3533.7,
+      "projectedSWE": 207,
       "baseLow": 3370,
       "baseLowDate": "2027-06-01"
     }
